@@ -2,7 +2,7 @@ from flask import Blueprint
 from flask_caching import Cache
 
 from handlers.guards import guard_request, guarded_render, rate_limit
-from services.messari_service import get_asset_details, get_assets
+from services.messari_service import get_asset_details
 
 DEFAULT_DETAIL_SLUGS = "bitcoin,ethereum"
 
@@ -17,12 +17,10 @@ def init_messari_blueprint(cache: Cache, limiter=None):
         guard_request("messari_index_last_hit", cooldown=5)
 
         def fetch_context():
-            assets_payload, assets_at = get_assets(limit=20, page=1)
             details_payload, details_at = get_asset_details(DEFAULT_DETAIL_SLUGS)
             return {
-                "assets": assets_payload,
                 "details": details_payload,
-                "last_updated": max(assets_at, details_at),
+                "last_updated": details_at,
             }
 
         return guarded_render("messari/index.html", fetch_context)
@@ -34,7 +32,7 @@ def init_messari_blueprint(cache: Cache, limiter=None):
         guard_request(f"messari_asset_last_hit_{slug}", cooldown=3)
 
         def fetch_context():
-            details_payload, fetched_at = get_asset_details(DEFAULT_DETAIL_SLUGS)
+            details_payload, fetched_at = get_asset_details(slug)
             return {
                 "slug": slug,
                 "details": details_payload,

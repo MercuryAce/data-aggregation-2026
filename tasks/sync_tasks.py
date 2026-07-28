@@ -10,6 +10,12 @@ from scripts.sync_coingecko import (
     sync_ohlc,
     sync_popular_searches,
 )
+from scripts.sync_defillama import (
+    sync_historical_chain_tvl,
+    sync_historical_chain_tvl_by_chain,
+    sync_protocol,
+    sync_protocols,
+)
 
 
 def _run_sync(func, *args, **kwargs):
@@ -69,3 +75,16 @@ def sync_ohlc_task(**kwargs):
 @celery.task(name="tasks.sync_tasks.sync_search")
 def sync_search_task():
     _run_sync(sync_popular_searches)
+
+
+@celery.task(name="tasks.sync_tasks.sync_defillama_protocols")
+def sync_defillama_protocols_task():
+    _run_sync(sync_protocols)
+    _run_sync(sync_protocol, "aave")
+
+
+@celery.task(name="tasks.sync_tasks.sync_defillama_historical_tvl")
+def sync_defillama_historical_tvl_task(**kwargs):
+    chain = kwargs.get("chain", "Ethereum")
+    _run_sync(sync_historical_chain_tvl)
+    _run_sync(sync_historical_chain_tvl_by_chain, chain)

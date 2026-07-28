@@ -45,4 +45,13 @@ beat_schedule = {
         "task": "tasks.sync_tasks.sync_search",
         "schedule": 4 * 60 * 60,
     },
+    "sync-defillama-protocols": {
+        "task": "tasks.sync_tasks.sync_defillama_protocols",
+        "schedule": 60 * 60,          # hourly — protocols list + aave detail
+    },
+    "sync-defillama-historical-tvl": {
+        "task": "tasks.sync_tasks.sync_defillama_historical_tvl",
+        "schedule": 4 * 60 * 60,      # every 4 hours
+        "kwargs": {"chain": "Ethereum"},
+    },
 }

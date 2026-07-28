@@ -85,8 +85,11 @@ def get_trending():
     return _cached(cache_keys.trending_key())
 
 
-def get_global():
-    return _cached(cache_keys.global_key())
+def get_global() -> tuple[dict[str, object], datetime]:
+    payload, fetched_at = _cached(cache_keys.global_key())
+    if not isinstance(payload, dict):
+        raise CacheMissError("Cached global payload is not an object")
+    return payload, fetched_at
 
 
 def get_global_market_cap_chart(days=30, vs_currency="usd"):

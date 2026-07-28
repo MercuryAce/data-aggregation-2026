@@ -107,7 +107,7 @@ def main() -> int:
             elif name == "asset_details":
                 sync_asset_details(slugs=args.slugs)
             elif name == "exchanges":
-                sync_exchanges(limit=100, page=1)
+                sync_exchanges(limit=args.limit, page=args.page)
             elif name == "asset_timeseries":
                 sync_asset_timeseries(
                     slug=args.timeseries_slug,
