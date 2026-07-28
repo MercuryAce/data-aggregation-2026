@@ -1,10 +1,7 @@
 from datetime import datetime
 
 from services import cache_keys, cache_store
-
-
-class CacheMissError(Exception):
-    pass
+from services.cache_store import CacheMissError
 
 
 def _cached(key: str) -> tuple[dict | list, datetime]:

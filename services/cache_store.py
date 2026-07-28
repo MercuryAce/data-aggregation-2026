@@ -7,6 +7,10 @@ from datetime import datetime, timedelta, timezone
 from models import ApiCache, db
 
 
+class CacheMissError(Exception):
+    """Raised when a cache key is missing (sync has not populated it yet)."""
+
+
 @dataclass(frozen=True)
 class CacheEntry:
     payload: dict | list

@@ -1,15 +1,13 @@
-import os
 import requests
-from dotenv import load_dotenv
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-load_dotenv()
+from config import Config
 
-API_KEY = os.getenv("CG_API_KEY")
-API_KEY_HEADER = os.getenv("CG_API_KEY_HEADER", "x-cg-demo-api-key")
-BASE_URL = os.getenv("CG_BASE_URL", "https://api.coingecko.com/api/v3")
-REQUEST_TIMEOUT = int(os.getenv("CG_REQUEST_TIMEOUT", "15"))
+API_KEY = Config.CG_API_KEY
+API_KEY_HEADER = Config.CG_API_KEY_HEADER
+BASE_URL = Config.CG_BASE_URL
+REQUEST_TIMEOUT = Config.CG_REQUEST_TIMEOUT
 
 headers = {
     "accept": "application/json",
