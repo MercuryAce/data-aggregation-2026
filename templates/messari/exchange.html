@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}{{ exchange_id }} — Messari — CryptoDash{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('messari.index') }}">Messari</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('messari.exchanges') }}">Exchanges</a></li>
+        <li class="breadcrumb-item active">{{ exchange_id }}</li>
+    </ol>
+</nav>
+<h1 class="h3 mb-2">{{ exchange_id }}</h1>
+{% if last_updated %}<p class="text-muted small">Last synced: {{ last_updated }}</p>{% endif %}
+<pre class="small bg-dark text-light p-3 rounded overflow-auto" style="max-height: 70vh;">{{ exchange | tojson(indent=2) }}</pre>
+{% endblock %}

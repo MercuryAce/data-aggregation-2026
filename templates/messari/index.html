@@ -3,14 +3,27 @@
 {% block title %}Messari — CryptoDash{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <h1 class="h3 mb-3">Messari assets</h1>
-    <p class="text-muted small">Cached market data (BTC / ETH on free tier).</p>
-
-    {% if last_updated %}
-    <p class="text-muted small">Last synced: {{ last_updated }}</p>
-    {% endif %}
-
-    <pre class="small bg-dark text-light p-3 rounded overflow-auto" style="max-height: 70vh;">{{ details | tojson(indent=2) }}</pre>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+        <h1 class="h3 mb-1">Messari</h1>
+        <p class="text-muted small mb-0">Cached asset metrics (free-tier friendly defaults).</p>
+        {% if last_updated %}
+        <p class="text-muted small mb-0">Last synced: {{ last_updated }}</p>
+        {% endif %}
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-sm btn-outline-light" href="{{ url_for('messari.assets') }}">Assets</a>
+        <a class="btn btn-sm btn-outline-light" href="{{ url_for('messari.exchanges') }}">Exchanges</a>
+        <span class="text-muted small align-self-center">(Enterprise API)</span>
+        <a class="btn btn-sm btn-outline-light" href="{{ url_for('messari.metrics_catalog') }}">Metrics</a>
+        <a class="btn btn-sm btn-outline-light" href="{{ url_for('messari.asset_detail', slug='bitcoin') }}">Bitcoin</a>
+        <a class="btn btn-sm btn-outline-light" href="{{ url_for('messari.asset_detail', slug='ethereum') }}">Ethereum</a>
+    </div>
 </div>
+
+<h2 class="h5 mb-2">Featured details</h2>
+<pre class="small bg-dark text-light p-3 rounded overflow-auto mb-4" style="max-height: 40vh;">{{ details | tojson(indent=2) }}</pre>
+
+<h2 class="h5 mb-2">Assets page 1</h2>
+<pre class="small bg-dark text-light p-3 rounded overflow-auto" style="max-height: 40vh;">{{ assets | tojson(indent=2) }}</pre>
 {% endblock %}

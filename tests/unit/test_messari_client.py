@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import json
-
 import pytest
 import responses
-from requests.exceptions import HTTPError
 
 from clients import messari_client
 
@@ -102,8 +99,25 @@ def test_http_error_raises():
         status=404,
     )
 
-    with pytest.raises(HTTPError):
+    with pytest.raises(messari_client.MessariAPIError) as exc_info:
         messari_client.get_assets()
+    assert exc_info.value.status_code == 404
+    assert "nope" in exc_info.value.message
+
+
+@responses.activate
+def test_enterprise_required_message_on_401():
+    responses.add(
+        responses.GET,
+        f"{BASE}/metrics/v1/exchanges",
+        json={"error": "A Messari Enterprise membership is required."},
+        status=401,
+    )
+
+    with pytest.raises(messari_client.MessariAPIError) as exc_info:
+        messari_client.get_exchanges()
+    assert exc_info.value.status_code == 401
+    assert "Enterprise" in exc_info.value.message
 
 
 @responses.activate

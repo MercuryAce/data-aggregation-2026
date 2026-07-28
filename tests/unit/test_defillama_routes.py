@@ -1,89 +1,72 @@
-"""T5 (partial): DefiLlama routes — cache dependencies."""
+"""T5 (partial): DefiLlama routes — service wiring."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
 
+def _now():
+    return datetime.now(timezone.utc)
+
+
+def test_index_renders(client, no_request_guard, app):
+    from app import cache
+
+    cache.clear()
+    response = client.get("/defillama/")
+    assert response.status_code == 200
+    assert b"DefiLlama" in response.data
+
+
 def test_protocols_loads_cache(client, no_request_guard, monkeypatch, app):
     from app import cache
 
     cache.clear()
-    protocols_calls = []
 
-    def fake_protocols():
-        protocols_calls.append(1)
-        return [{"id": "1", "name": "Protocol 1"}], datetime.now(timezone.utc)
-
-    monkeypatch.setattr("blueprints.defillama.get_protocols", fake_protocols)
+    monkeypatch.setattr(
+        "blueprints.defillama.svc.get_protocols",
+        lambda: ([{"name": "Protocol 1"}], _now()),
+    )
 
     response = client.get("/defillama/protocols")
-
     assert response.status_code == 200
-    assert protocols_calls == [1]
     assert b"Protocol 1" in response.data
 
 
-def test_protocol_loads_cache(client, no_request_guard, monkeypatch, app):
+def test_protocol_and_chains_routes(client, no_request_guard, monkeypatch, app):
     from app import cache
 
     cache.clear()
-    protocol_calls = []
-
-    def fake_protocol(protocol: str):
-        protocol_calls.append(protocol)
-        return {"id": "1", "name": "Protocol 1"}, datetime.now(timezone.utc)
-
-    monkeypatch.setattr("blueprints.defillama.get_protocol", fake_protocol)
-
-    response = client.get("/defillama/protocol/aave")
-
-    assert response.status_code == 200
-    assert protocol_calls == ["aave"]
-    assert b"Protocol 1" in response.data
-
-
-def test_historical_chain_tvl_loads_cache(client, no_request_guard, monkeypatch, app):
-    from app import cache
-
-    cache.clear()
-    calls = []
-
-    def fake_historical_chain_tvl():
-        calls.append(1)
-        return [{"date": 1, "tvl": 100}], datetime.now(timezone.utc)
-
     monkeypatch.setattr(
-        "blueprints.defillama.get_historical_chain_tvl",
-        fake_historical_chain_tvl,
+        "blueprints.defillama.svc.get_protocol",
+        lambda protocol: ({"name": protocol}, _now()),
+    )
+    monkeypatch.setattr(
+        "blueprints.defillama.svc.get_chains",
+        lambda: ([{"name": "Ethereum"}], _now()),
     )
 
-    response = client.get("/defillama/historical-chain-tvl")
+    assert client.get("/defillama/protocol/aave").status_code == 200
+    assert b"aave" in client.get("/defillama/protocol/aave").data
+    assert client.get("/defillama/v2/chains").status_code == 200
+    assert b"Ethereum" in client.get("/defillama/chains").data
 
-    assert response.status_code == 200
-    assert calls == [1]
-    assert b"100" in response.data
 
-
-def test_historical_chain_tvl_by_chain_loads_cache(
-    client, no_request_guard, monkeypatch, app
-):
+def test_dexs_fees_bridges_routes(client, no_request_guard, monkeypatch, app):
     from app import cache
 
     cache.clear()
-    calls = []
-
-    def fake_historical_chain_tvl_by_chain(chain: str):
-        calls.append(chain)
-        return [{"date": 1, "tvl": 50}], datetime.now(timezone.utc)
-
     monkeypatch.setattr(
-        "blueprints.defillama.get_historical_chain_tvl_by_chain",
-        fake_historical_chain_tvl_by_chain,
+        "blueprints.defillama.svc.get_dexs", lambda: ({"total24h": 11}, _now())
+    )
+    monkeypatch.setattr(
+        "blueprints.defillama.svc.get_fees", lambda: ({"total24h": 22}, _now())
+    )
+    monkeypatch.setattr(
+        "blueprints.defillama.svc.get_bridges",
+        lambda: ({"bridges": [{"name": "Portal"}]}, _now()),
     )
 
-    response = client.get("/defillama/historical-chain-tvl/Ethereum")
-
-    assert response.status_code == 200
-    assert calls == ["Ethereum"]
-    assert b"50" in response.data
+    assert b"11" in client.get("/defillama/overview/dexs").data
+    assert b"22" in client.get("/defillama/fees").data
+    assert b"Portal" in client.get("/defillama/bridges").data

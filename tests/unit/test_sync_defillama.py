@@ -7,16 +7,12 @@ import scripts.sync_defillama as sync_defillama
 
 def test_protocols_task_uses_cli_flags(app, monkeypatch):
     calls = []
-
-    monkeypatch.setattr(
-        sync_defillama,
-        "sync_protocols",
+    monkeypatch.setitem(
+        sync_defillama.TASKS,
+        "protocols",
         lambda: calls.append({"protocols": True}),
     )
-    monkeypatch.setattr(
-        "sys.argv",
-        ["sync_defillama.py", "--tasks", "protocols"],
-    )
+    monkeypatch.setattr("sys.argv", ["sync_defillama.py", "--tasks", "protocols"])
 
     assert sync_defillama.main() == 0
     assert calls == [{"protocols": True}]
@@ -24,7 +20,6 @@ def test_protocols_task_uses_cli_flags(app, monkeypatch):
 
 def test_protocol_task_uses_cli_flags(app, monkeypatch):
     calls = []
-
     monkeypatch.setattr(
         sync_defillama,
         "sync_protocol",
@@ -41,10 +36,9 @@ def test_protocol_task_uses_cli_flags(app, monkeypatch):
 
 def test_historical_chain_tvl_task_needs_no_chain(app, monkeypatch):
     calls = []
-
-    monkeypatch.setattr(
-        sync_defillama,
-        "sync_historical_chain_tvl",
+    monkeypatch.setitem(
+        sync_defillama.TASKS,
+        "historical_chain_tvl",
         lambda: calls.append({"all_chains": True}),
     )
     monkeypatch.setattr(
@@ -58,7 +52,6 @@ def test_historical_chain_tvl_task_needs_no_chain(app, monkeypatch):
 
 def test_historical_chain_tvl_by_chain_task_uses_cli_flags(app, monkeypatch):
     calls = []
-
     monkeypatch.setattr(
         sync_defillama,
         "sync_historical_chain_tvl_by_chain",

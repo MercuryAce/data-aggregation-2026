@@ -47,11 +47,20 @@ beat_schedule = {
     },
     "sync-defillama-protocols": {
         "task": "tasks.sync_tasks.sync_defillama_protocols",
-        "schedule": 60 * 60,          # hourly — protocols list + aave detail
+        "schedule": 60 * 60,          # hourly — protocols, aave, chains
     },
     "sync-defillama-historical-tvl": {
         "task": "tasks.sync_tasks.sync_defillama_historical_tvl",
         "schedule": 4 * 60 * 60,      # every 4 hours
         "kwargs": {"chain": "Ethereum"},
+    },
+    "sync-defillama-markets": {
+        "task": "tasks.sync_tasks.sync_defillama_markets",
+        "schedule": 2 * 60 * 60,      # every 2 hours — stables/pools/bridges/dexs/fees
+    },
+    "sync-messari": {
+        "task": "tasks.sync_tasks.sync_messari",
+        "schedule": 60 * 60,
+        "kwargs": {"limit": 20, "slugs": "bitcoin,ethereum"},
     },
 }

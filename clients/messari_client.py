@@ -73,6 +73,16 @@ def get_exchange(exchange_id, **params):
     return _call(f"{BASE_URL}/metrics/v1/exchanges/{exchange_id}", params)
 
 
+class MessariAPIError(Exception):
+    """Raised when Messari returns a non-success HTTP response."""
+
+    def __init__(self, status_code: int, message: str, url: str):
+        self.status_code = status_code
+        self.message = message
+        self.url = url
+        super().__init__(f"{status_code} {message} ({url})")
+
+
 def _call(url: str, params: dict | None = None):
     response = session.get(
         url,
@@ -80,5 +90,14 @@ def _call(url: str, params: dict | None = None):
         headers=headers,
         timeout=REQUEST_TIMEOUT,
     )
-    response.raise_for_status()
-    return response.json()
+    if response.ok:
+        return response.json()
+
+    detail = ""
+    try:
+        body = response.json()
+        detail = body.get("error") or body.get("message") or response.text[:200]
+    except Exception:
+        detail = response.text[:200] or response.reason
+
+    raise MessariAPIError(response.status_code, str(detail), response.url)

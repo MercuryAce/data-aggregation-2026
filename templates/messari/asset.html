@@ -13,6 +13,12 @@
 
     <h1 class="h3 mb-3">{{ slug | title }}</h1>
 
+    <p class="mb-3">
+        <a class="btn btn-sm btn-outline-light" href="{{ url_for('messari.asset_timeseries', slug=slug, metric='price', granularity='1d') }}">
+            Price timeseries (1d)
+        </a>
+    </p>
+
     {% if last_updated %}
     <p class="text-muted small">Last synced: {{ last_updated }}</p>
     {% endif %}

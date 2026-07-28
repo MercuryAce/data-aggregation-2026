@@ -1,3 +1,4 @@
+import os
 import time
 
 from flask import abort, current_app, jsonify, render_template, session
@@ -6,17 +7,29 @@ from werkzeug.exceptions import HTTPException
 
 from services.cache_store import CacheMissError
 
+# Cached pages no longer hit live APIs; keep guards off by default.
+# Set REQUEST_GUARD_COOLDOWN=5 to restore click-spam protection.
+_DEFAULT_GUARD_COOLDOWN = int(os.getenv("REQUEST_GUARD_COOLDOWN", "0"))
+_PAGE_RATE_LIMIT = os.getenv("PAGE_RATE_LIMIT", "60 per minute")
+
 
 def rate_limit(limiter, limit_str):
+    """Apply flask-limiter; PAGE_RATE_LIMIT env overrides per-route strings."""
+    effective = _PAGE_RATE_LIMIT or limit_str
+
     def decorator(f):
         if not limiter:
             return f
-        return limiter.limit(limit_str)(f)
+        return limiter.limit(effective)(f)
 
     return decorator
 
 
-def allow_request(key, cooldown=5):
+def allow_request(key, cooldown=None):
+    if cooldown is None:
+        cooldown = _DEFAULT_GUARD_COOLDOWN
+    if cooldown <= 0:
+        return True
     now = time.time()
     last = session.get(key, 0)
     if now - last < cooldown:
@@ -25,9 +38,25 @@ def allow_request(key, cooldown=5):
     return True
 
 
-def guard_request(key: str, cooldown: int):
+def guard_request(key: str, cooldown: int | None = None):
+    if cooldown is None:
+        cooldown = _DEFAULT_GUARD_COOLDOWN
+    # Explicit cooldown=N in callers is ignored when global env is 0,
+    # unless REQUEST_GUARD_COOLDOWN is unset and they pass a value —
+    # prefer env as the master switch for the cached architecture.
+    env = os.getenv("REQUEST_GUARD_COOLDOWN")
+    if env is not None:
+        cooldown = int(env)
     if not allow_request(key, cooldown=cooldown):
         abort(429)
+
+
+def only_cache_success(response):
+    """Do not store 4xx/5xx in flask-caching."""
+    try:
+        return getattr(response, "status_code", 200) == 200
+    except Exception:
+        return False
 
 
 def guarded_render(template_name: str, fetch_context):

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}DefiLlama — CryptoDash{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">DefiLlama</h1>
+<p class="text-muted">Cached DeFi market data from api.llama.fi and related hosts.</p>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <h2 class="h6 text-uppercase text-muted">TVL</h2>
+        <ul class="list-unstyled">
+            <li><a href="{{ url_for('defillama.protocols') }}">Protocols</a></li>
+            <li><a href="{{ url_for('defillama.chains') }}">Chains</a></li>
+            <li><a href="{{ url_for('defillama.historical_chain_tvl') }}">Historical chain TVL</a></li>
+            <li><a href="{{ url_for('defillama.historical_chain_tvl_by_chain', chain='Ethereum') }}">Ethereum historical TVL</a></li>
+        </ul>
+    </div>
+    <div class="col-md-4">
+        <h2 class="h6 text-uppercase text-muted">Markets</h2>
+        <ul class="list-unstyled">
+            <li><a href="{{ url_for('defillama.stablecoins') }}">Stablecoins</a></li>
+            <li><a href="{{ url_for('defillama.pools') }}">Yield pools</a></li>
+            <li><a href="{{ url_for('defillama.bridges') }}">Bridges</a> <span class="text-muted small">(paid API)</span></li>
+            <li><a href="{{ url_for('defillama.dexs') }}">DEX volumes</a></li>
+            <li><a href="{{ url_for('defillama.fees') }}">Fees</a></li>
+            <li><a href="{{ url_for('defillama.options') }}">Options</a></li>
+        </ul>
+    </div>
+    <div class="col-md-4">
+        <h2 class="h6 text-uppercase text-muted">Examples</h2>
+        <ul class="list-unstyled">
+            <li><a href="{{ url_for('defillama.protocol_detail', protocol='aave') }}">Protocol: aave</a></li>
+            <li><a href="{{ url_for('defillama.dexs_by_chain', chain='Ethereum') }}">DEXs: Ethereum</a></li>
+            <li><a href="{{ url_for('defillama.fees_by_chain', chain='Ethereum') }}">Fees: Ethereum</a></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

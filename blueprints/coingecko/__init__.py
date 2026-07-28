@@ -1,7 +1,13 @@
 from flask import Blueprint, abort, jsonify, request
 from flask_caching import Cache
 
-from handlers.guards import guard_request, guarded_json, guarded_render, rate_limit
+from handlers.guards import (
+    only_cache_success,
+    guard_request,
+    guarded_json,
+    guarded_render,
+    rate_limit,
+)
 from services.coingecko_service import (
     get_categories,
     get_coin_details,
@@ -19,7 +25,7 @@ cg_bp = Blueprint("cg", __name__, url_prefix="")
 
 def init_cg_blueprint(cache: Cache, limiter=None):
     @cg_bp.route("/")
-    @cache.cached(timeout=300)
+    @cache.cached(timeout=300, response_filter=only_cache_success)
     @rate_limit(limiter, "5 per minute")
     def index():
         guard_request("index_last_hit", cooldown=5)
@@ -36,7 +42,7 @@ def init_cg_blueprint(cache: Cache, limiter=None):
         return guarded_render("index.html", fetch_context)
 
     @cg_bp.route("/coin/<coin_id>")
-    @cache.cached(timeout=120)
+    @cache.cached(timeout=120, response_filter=only_cache_success)
     @rate_limit(limiter, "5 per minute")
     def coin(coin_id):
         guard_request(f"coin_last_hit_{coin_id}", cooldown=3)
@@ -48,7 +54,7 @@ def init_cg_blueprint(cache: Cache, limiter=None):
         return guarded_render("coin.html", fetch_context)
 
     @cg_bp.route("/api/price-history/<coin_id>")
-    @cache.cached(timeout=300, query_string=True)
+    @cache.cached(timeout=300, query_string=True, response_filter=only_cache_success)
     @rate_limit(limiter, "5 per minute")
     def price_history(coin_id):
         allowed_days = {7, 30, 90, 365}
@@ -61,7 +67,7 @@ def init_cg_blueprint(cache: Cache, limiter=None):
         return guarded_json(lambda: get_ohlc(coin_id, days=days)[0])
 
     @cg_bp.route("/trending")
-    @cache.cached(timeout=120)
+    @cache.cached(timeout=120, response_filter=only_cache_success)
     @rate_limit(limiter, "5 per minute")
     def trending():
         guard_request("trending_last_hit", cooldown=5)
@@ -73,7 +79,7 @@ def init_cg_blueprint(cache: Cache, limiter=None):
         return guarded_render("trending.html", fetch_context)
 
     @cg_bp.route("/categories")
-    @cache.cached(timeout=120)
+    @cache.cached(timeout=120, response_filter=only_cache_success)
     @rate_limit(limiter, "5 per minute")
     def categories():
         guard_request("categories_last_hit", cooldown=5)
@@ -85,7 +91,7 @@ def init_cg_blueprint(cache: Cache, limiter=None):
         return guarded_render("categories.html", fetch_context)
 
     @cg_bp.route("/search")
-    @cache.cached(timeout=60, query_string=True)
+    @cache.cached(timeout=60, query_string=True, response_filter=only_cache_success)
     @rate_limit(limiter, "5 per minute")
     def search():
         query = request.args.get("q", "", type=str).strip()
@@ -101,7 +107,7 @@ def init_cg_blueprint(cache: Cache, limiter=None):
         return guarded_render("search.html", fetch_context)
 
     @cg_bp.route("/exchanges")
-    @cache.cached(timeout=120)
+    @cache.cached(timeout=120, response_filter=only_cache_success)
     @rate_limit(limiter, "5 per minute")
     def exchanges():
         guard_request("exchanges_last_hit", cooldown=5)
@@ -113,7 +119,7 @@ def init_cg_blueprint(cache: Cache, limiter=None):
         return guarded_render("exchanges.html", fetch_context)
 
     @cg_bp.route("/exchange/<exchange_id>")
-    @cache.cached(timeout=120)
+    @cache.cached(timeout=120, response_filter=only_cache_success)
     @rate_limit(limiter, "5 per minute")
     def exchange_detail(exchange_id):
         guard_request(f"exchange_last_hit_{exchange_id}", cooldown=3)
