@@ -15,29 +15,63 @@ if str(ROOT) not in sys.path:
 from app import app
 from clients import cg_client
 from services import cache_keys, cache_store
+from services.timeseries_store import append_price_ticks
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-TTL_MARKETS = 30 * 60
+TTL_MARKETS = 60 * 60
 TTL_WARM = 60 * 60
 TTL_COLD = 4 * 60 * 60
 TTL_COIN = 2 * 60 * 60
 TTL_OHLC = 6 * 60 * 60
 
 
-def sync_markets(vs_currency="usd", limit=250, page=1) -> None:
-    markets = cg_client.get_market_data(vs_currency=vs_currency, limit=limit, page=page)
-    cache_store.set(
-        cache_keys.markets_key(vs_currency, limit, page),
-        markets,
-        ttl_seconds=TTL_MARKETS,
-    )
-    logger.info("Synced %s", cache_keys.markets_key(vs_currency, limit, page))
+def sync_markets(vs_currency="usd", limit=250, page=1, pages=1) -> None:
+    """Sync one or more markets pages (pages>1 walks page..page+pages-1)."""
+    page_count = max(1, int(pages or 1))
+    start_page = max(1, int(page or 1))
+    all_ticks: list[dict] = []
+
+    for offset in range(page_count):
+        current = start_page + offset
+        markets = cg_client.get_market_data(
+            vs_currency=vs_currency,
+            limit=limit,
+            page=current,
+        )
+        cache_store.set(
+            cache_keys.markets_key(vs_currency, limit, current),
+            markets,
+            ttl_seconds=TTL_MARKETS,
+        )
+        logger.info(
+            "Synced %s (%s rows)",
+            cache_keys.markets_key(vs_currency, limit, current),
+            len(markets) if isinstance(markets, list) else "?",
+        )
+        for coin in markets or []:
+            if not isinstance(coin, dict):
+                continue
+            price = coin.get("current_price")
+            if price is None or not coin.get("id"):
+                continue
+            all_ticks.append(
+                {
+                    "asset_id": coin["id"],
+                    "source": "coingecko",
+                    "price": float(price),
+                    "volume": coin.get("total_volume"),
+                    "meta": {"symbol": coin.get("symbol")},
+                }
+            )
+        if not markets or (isinstance(markets, list) and len(markets) < limit):
+            break
 
     global_data = cg_client.get_global()
     cache_store.set(cache_keys.global_key(), global_data, ttl_seconds=TTL_MARKETS)
     logger.info("Synced %s", cache_keys.global_key())
+    append_price_ticks(all_ticks)
 
 
 def sync_trending() -> None:
@@ -113,6 +147,8 @@ def main() -> int:
         required=True,
         help="Comma-separated tasks: markets,trending,categories,exchanges,top-coins,ohlc,search",
     )
+    parser.add_argument("--pages", type=int, default=1, help="Markets page count")
+    parser.add_argument("--limit", type=int, default=250)
     args = parser.parse_args()
 
     task_names = [name.strip() for name in args.tasks.split(",") if name.strip()]
@@ -124,7 +160,10 @@ def main() -> int:
     with app.app_context():
         for name in task_names:
             logger.info("Running task: %s", name)
-            TASKS[name]()
+            if name == "markets":
+                sync_markets(limit=args.limit, pages=args.pages)
+            else:
+                TASKS[name]()
 
     return 0
 

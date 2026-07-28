@@ -29,16 +29,25 @@
                 <div class="d-flex align-items-center justify-content-end gap-3">
                     <div class="d-flex align-items-center">
                         <i class="fa-solid fa-thumbs-up fa-fw text-success me-1"></i>
-                        <span class="fs-5 fw-bold text-success">{{ "%.0f"|format(coin.get('sentiment_votes_up_percentage', 0)) }}%</span>
+                        <span class="fs-5 fw-bold text-success">{{ "%.0f"|format(coin.get('sentiment_votes_up_percentage', 0) or 0) }}%</span>
                     </div>
 
                     <div class="vr" style="height: 24px; opacity: 0.35;"></div>
 
                     <div class="d-flex align-items-center">
                         <i class="fa-solid fa-thumbs-down fa-fw text-danger me-1"></i>
-                        <span class="fs-5 fw-bold text-danger">{{ "%.0f"|format(coin.get('sentiment_votes_down_percentage', 0)) }}%</span>
+                        <span class="fs-5 fw-bold text-danger">{{ "%.0f"|format(coin.get('sentiment_votes_down_percentage', 0) or 0) }}%</span>
                     </div>
                 </div>
+                {% if last_updated_age or price_source %}
+                <small class="text-muted d-block mt-2">
+                    {% if last_updated_age %}Updated {{ last_updated_age }}{% endif %}
+                    {% if price_source %} · {{ price_source|upper }}{% endif %}
+                    {% if coin.get('mashup', {}).get('tvl') is not none %}
+                     · TVL {{ coin.mashup.tvl | compact_usd }}
+                    {% endif %}
+                </small>
+                {% endif %}
             </div>
 
         </div>

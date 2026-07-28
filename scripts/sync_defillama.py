@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
 from app import app
 from clients import defillama_client
 from services import cache_store, defillama_cache_keys
+from services.timeseries_store import append_price_ticks
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -62,10 +63,26 @@ def sync_chains() -> None:
 
 
 def sync_current_prices(coins: str = DEFAULT_COINS) -> None:
-    _set(
-        defillama_cache_keys.current_prices_key(coins),
-        defillama_client.get_current_prices(coins),
-    )
+    data = defillama_client.get_current_prices(coins)
+    _set(defillama_cache_keys.current_prices_key(coins), data)
+    ticks = []
+    coin_map = (data or {}).get("coins") if isinstance(data, dict) else None
+    if isinstance(coin_map, dict):
+        for coin_key, info in coin_map.items():
+            if not isinstance(info, dict) or info.get("price") is None:
+                continue
+            asset_id = coin_key
+            if coin_key.startswith("coingecko:"):
+                asset_id = coin_key.split(":", 1)[1]
+            ticks.append(
+                {
+                    "asset_id": asset_id,
+                    "source": SOURCE,
+                    "price": float(info["price"]),
+                    "meta": {"defillama_key": coin_key},
+                }
+            )
+    append_price_ticks(ticks)
 
 
 def sync_stablecoins() -> None:

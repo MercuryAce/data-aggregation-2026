@@ -1,6 +1,6 @@
 import os
 
-# Redis for broker + results 
+# Redis for broker + results
 broker_url = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 result_backend = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
 
@@ -17,28 +17,42 @@ accept_content = ["json"]
 task_acks_late = True
 worker_prefetch_multiplier = 1
 
-# Tiered schedule — aligned with API quota, not every 10 minutes for everything
+# Tiered schedule — CG cold structure, CMC/DefiLlama for live prices
 beat_schedule = {
+    "sync-cmc-listings": {
+        "task": "tasks.sync_tasks.sync_cmc_listings",
+        "schedule": 2 * 60,           # every 2 min — live ranked prices
+        "kwargs": {"start": 1, "limit": 500},
+    },
+    "sync-cmc-map": {
+        "task": "tasks.sync_tasks.sync_cmc_map",
+        "schedule": 24 * 60 * 60,     # daily ID map source
+    },
+    "sync-asset-id-map": {
+        "task": "tasks.sync_tasks.sync_asset_id_map",
+        "schedule": 6 * 60 * 60,
+    },
     "sync-markets-global": {
         "task": "tasks.sync_tasks.sync_markets",
-        "schedule": 30 * 60,          # every 30 min (~1,440 calls/month for 2 endpoints)
+        "schedule": 60 * 60,          # hourly CG structure (multi-page)
+        "kwargs": {"pages": 10, "limit": 250},
     },
     "sync-trending-categories": {
         "task": "tasks.sync_tasks.sync_trending_categories",
-        "schedule": 60 * 60,          # hourly
+        "schedule": 60 * 60,
     },
     "sync-exchanges": {
         "task": "tasks.sync_tasks.sync_exchanges",
-        "schedule": 4 * 60 * 60,      # every 4 hours
+        "schedule": 4 * 60 * 60,
     },
     "sync-top-coins": {
         "task": "tasks.sync_tasks.sync_top_coins",
-        "schedule": 2 * 60 * 60,      # every 2 hours
-        "kwargs": {"limit": 250},     # match index page (250 coins)
+        "schedule": 2 * 60 * 60,
+        "kwargs": {"limit": 30},      # quota-safe detail refresh
     },
     "sync-ohlc": {
         "task": "tasks.sync_tasks.sync_ohlc",
-        "schedule": 6 * 60 * 60,      # every 6 hours
+        "schedule": 6 * 60 * 60,
         "kwargs": {"limit": 20, "days": 30},
     },
     "sync-search": {
@@ -47,16 +61,23 @@ beat_schedule = {
     },
     "sync-defillama-protocols": {
         "task": "tasks.sync_tasks.sync_defillama_protocols",
-        "schedule": 60 * 60,          # hourly — protocols, aave, chains
+        "schedule": 60 * 60,
     },
     "sync-defillama-historical-tvl": {
         "task": "tasks.sync_tasks.sync_defillama_historical_tvl",
-        "schedule": 4 * 60 * 60,      # every 4 hours
+        "schedule": 4 * 60 * 60,
         "kwargs": {"chain": "Ethereum"},
     },
     "sync-defillama-markets": {
         "task": "tasks.sync_tasks.sync_defillama_markets",
-        "schedule": 2 * 60 * 60,      # every 2 hours — stables/pools/bridges/dexs/fees
+        "schedule": 2 * 60 * 60,
+    },
+    "sync-defillama-prices": {
+        "task": "tasks.sync_tasks.sync_defillama_prices",
+        "schedule": 5 * 60,
+        "kwargs": {
+            "coins": "coingecko:bitcoin,coingecko:ethereum,coingecko:solana",
+        },
     },
     "sync-messari": {
         "task": "tasks.sync_tasks.sync_messari",

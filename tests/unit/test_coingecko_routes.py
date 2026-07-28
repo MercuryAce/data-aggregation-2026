@@ -28,12 +28,21 @@ def test_index_loads_markets_and_global(client, no_request_guard, monkeypatch, a
     cache.clear()
     captured = _capture_render(monkeypatch)
 
-    markets = [{"id": "bitcoin", "name": "Bitcoin"}]
+    markets = [{"id": "bitcoin", "name": "Bitcoin", "symbol": "btc", "current_price": 1}]
     global_payload = {"data": {"markets": 50, "active_cryptocurrencies": 100}}
+    meta = {
+        "last_updated": _now(),
+        "last_updated_age": "0 seconds ago",
+        "price_source": "cmc",
+        "page": 1,
+        "per_page": 250,
+        "total": 1,
+        "total_pages": 1,
+    }
 
     monkeypatch.setattr(
-        "blueprints.coingecko.get_market_data",
-        lambda limit=250, vs_currency="usd", page=1: (markets, _now()),
+        "blueprints.coingecko.market_service.get_unified_markets",
+        lambda page=1, per_page=250, max_pages=10: (markets, meta),
     )
     monkeypatch.setattr(
         "blueprints.coingecko.get_global",
@@ -54,11 +63,17 @@ def test_coin_detail_uses_url_id(client, no_request_guard, monkeypatch, app):
     captured = _capture_render(monkeypatch)
     calls = []
 
-    def fake_coin_details(coin_id, vs_currency="usd"):
+    def fake_unified_coin(coin_id):
         calls.append(coin_id)
-        return {"id": coin_id, "name": "Ethereum"}, _now()
+        return (
+            {"id": coin_id, "name": "Ethereum", "mashup": {}},
+            {"last_updated": _now(), "last_updated_age": "1 minutes ago", "price_source": "cmc"},
+        )
 
-    monkeypatch.setattr("blueprints.coingecko.get_coin_details", fake_coin_details)
+    monkeypatch.setattr(
+        "blueprints.coingecko.market_service.get_unified_coin",
+        fake_unified_coin,
+    )
 
     response = client.get("/coin/ethereum")
     assert response.status_code == 200
@@ -80,6 +95,10 @@ def test_price_history_returns_ohlc_json(client, no_request_guard, monkeypatch, 
     cache.clear()
 
     monkeypatch.setattr(
+        "blueprints.coingecko.get_price_history",
+        lambda *args, **kwargs: [],
+    )
+    monkeypatch.setattr(
         "blueprints.coingecko.get_ohlc",
         lambda coin_id, days=30, vs_currency="usd": ([[1, 2, 3, 4, 5]], _now()),
     )
@@ -89,13 +108,41 @@ def test_price_history_returns_ohlc_json(client, no_request_guard, monkeypatch, 
     assert response.get_json() == [[1, 2, 3, 4, 5]]
 
 
+def test_live_prices_requires_ids(client, no_request_guard, app):
+    from app import cache
+
+    cache.clear()
+    response = client.get("/api/live-prices")
+    assert response.status_code == 400
+
+
+def test_live_prices_returns_payload(client, no_request_guard, monkeypatch, app):
+    from app import cache
+
+    cache.clear()
+
+    monkeypatch.setattr(
+        "blueprints.coingecko.market_service.get_live_prices",
+        lambda ids: {
+            "prices": {"bitcoin": {"price": 100.0, "source": "cmc"}},
+            "last_updated": _now(),
+            "last_updated_age": "0 seconds ago",
+        },
+    )
+
+    response = client.get("/api/live-prices?ids=bitcoin")
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["prices"]["bitcoin"]["price"] == 100.0
+
+
 def test_index_cache_miss_returns_503(client, no_request_guard, monkeypatch, app):
     from app import cache
     from services.cache_store import CacheMissError
 
     cache.clear()
     monkeypatch.setattr(
-        "blueprints.coingecko.get_market_data",
+        "blueprints.coingecko.market_service.get_unified_markets",
         lambda **kwargs: (_ for _ in ()).throw(CacheMissError("missing")),
     )
 

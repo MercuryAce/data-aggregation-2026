@@ -10,8 +10,11 @@ from scripts.sync_coingecko import (
     sync_ohlc,
     sync_popular_searches,
 )
+from scripts.sync_cmc import sync_listings as sync_cmc_listings
+from scripts.sync_cmc import sync_map as sync_cmc_map
 from scripts.sync_defillama import (
     sync_chains,
+    sync_current_prices,
     sync_dexs,
     sync_fees,
     sync_historical_chain_tvl,
@@ -25,6 +28,7 @@ from scripts.sync_messari import (
     sync_asset_details,
     sync_assets,
 )
+from services import id_map
 
 
 def _run_sync(func, *args, **kwargs):
@@ -38,8 +42,8 @@ def _run_sync(func, *args, **kwargs):
 
 
 @celery.task(name="tasks.sync_tasks.sync_markets")
-def sync_markets_task():
-    _run_sync(sync_markets)
+def sync_markets_task(**kwargs):
+    _run_sync(sync_markets, **kwargs)
 
 
 @celery.task(name="tasks.sync_tasks.sync_trending")
@@ -70,8 +74,6 @@ def sync_top_coin_details_task(**kwargs):
 
 @celery.task(name="tasks.sync_tasks.sync_top_coins")
 def sync_top_coins_task(**kwargs):
-    # Beat schedule uses this name; default limit in script is 30.
-    # kwargs passes limit=250 for market coverage — map to top coin details.
     limit = kwargs.get("limit", 30)
     _run_sync(sync_top_coin_details, limit=limit)
 
@@ -84,6 +86,23 @@ def sync_ohlc_task(**kwargs):
 @celery.task(name="tasks.sync_tasks.sync_search")
 def sync_search_task():
     _run_sync(sync_popular_searches)
+
+
+@celery.task(name="tasks.sync_tasks.sync_cmc_listings")
+def sync_cmc_listings_task(**kwargs):
+    start = kwargs.get("start", 1)
+    limit = kwargs.get("limit", 500)
+    _run_sync(sync_cmc_listings, start=start, limit=limit)
+
+
+@celery.task(name="tasks.sync_tasks.sync_cmc_map")
+def sync_cmc_map_task(**kwargs):
+    _run_sync(sync_cmc_map, **kwargs)
+
+
+@celery.task(name="tasks.sync_tasks.sync_asset_id_map")
+def sync_asset_id_map_task():
+    _run_sync(id_map.build_id_map)
 
 
 @celery.task(name="tasks.sync_tasks.sync_defillama_protocols")
@@ -102,16 +121,20 @@ def sync_defillama_historical_tvl_task(**kwargs):
 
 @celery.task(name="tasks.sync_tasks.sync_defillama_markets")
 def sync_defillama_markets_task():
-    # Bridges host currently returns 402 on free tier — sync manually if subscribed.
     _run_sync(sync_stablecoins)
     _run_sync(sync_pools)
     _run_sync(sync_dexs)
     _run_sync(sync_fees)
 
 
+@celery.task(name="tasks.sync_tasks.sync_defillama_prices")
+def sync_defillama_prices_task(**kwargs):
+    coins = kwargs.get("coins", "coingecko:bitcoin,coingecko:ethereum")
+    _run_sync(sync_current_prices, coins)
+
+
 @celery.task(name="tasks.sync_tasks.sync_messari")
 def sync_messari_task(**kwargs):
-    # Exchanges require Messari Enterprise — omit from scheduled sync.
     limit = kwargs.get("limit", 20)
     slugs = kwargs.get("slugs", "bitcoin,ethereum")
     _run_sync(sync_assets, limit=limit, page=1)

@@ -6,8 +6,6 @@ from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from blueprints.coingecko import init_cg_blueprint
-from blueprints.defillama import init_defillama_blueprint
-from blueprints.messari import init_messari_blueprint
 from models import db
 import markdown
 
@@ -82,12 +80,6 @@ def compact_usd_filter(value, decimals=1):
 
 cg_bp = init_cg_blueprint(cache, limiter)
 app.register_blueprint(cg_bp)
-
-messari_bp = init_messari_blueprint(cache, limiter)
-app.register_blueprint(messari_bp)
-
-defillama_bp = init_defillama_blueprint(cache, limiter)
-app.register_blueprint(defillama_bp)
 
 register_error_handlers(app)
 

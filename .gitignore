@@ -4,3 +4,5 @@ __pycache__/
 .idea/
 instance/
 *.db
+certificates/
+*.pem

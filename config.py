@@ -22,6 +22,14 @@ class Config:
     DEFILLAMA_REQUEST_TIMEOUT = int(os.getenv("DEFILLAMA_REQUEST_TIMEOUT", "30"))
 
     CMC_API_KEY = os.getenv("CMC_API_KEY")
-    CMC_API_KEY_HEADER = os.getenv("CMC_API_KEY_HEADER", "x-cmc-api-key")
+    CMC_API_KEY_HEADER = os.getenv("CMC_API_KEY_HEADER", "X-CMC_PRO_API_KEY")
     CMC_BASE_URL = os.getenv("CMC_BASE_URL", "https://pro-api.coinmarketcap.com/v1")
     CMC_REQUEST_TIMEOUT = int(os.getenv("CMC_REQUEST_TIMEOUT", "15"))
+
+    MONGODB_URI = os.getenv("MONGODB_URI", "")
+    MONGODB_DB = os.getenv("MONGODB_DB", "cryptodash")
+    # X.509 client cert for Atlas (absolute or project-relative path)
+    MONGODB_TLS_CERT_FILE = os.getenv(
+        "MONGODB_TLS_CERT_FILE",
+        "certificates/X509-cert-8717029446821884498.pem",
+    )

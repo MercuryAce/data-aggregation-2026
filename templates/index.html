@@ -3,7 +3,7 @@
 {% block title %}Live Crypto Prices{% endblock %}
 
 {% block content %}
-    {% with title="Live Cryptocurrency Prices", subtitle="Top coins by market cap, updated live from CoinGecko" %}
+    {% with title="Live Cryptocurrency Prices", subtitle="Unified market data — CMC live prices mashed with CoinGecko structure" %}
         {% include "partials/page_header.html" %}
     {% endwith %}
 
@@ -69,8 +69,12 @@
         <div class="col-md-6">
             <input type="text" id="searchInput" class="form-control" placeholder="Filter coins by name or symbol...">
         </div>
-        <div class="col-md-6 text-md-end mt-2 mt-md-0 d-flex align-items-center justify-content-md-end">
-            <small class="text-muted">Showing top coins &bull; Auto-refreshes every 60s</small>
+        <div class="col-md-6 text-md-end mt-2 mt-md-0 d-flex align-items-center justify-content-md-end gap-2 flex-wrap">
+            <small class="text-muted" id="freshnessLabel">
+                {% if last_updated_age %}Updated {{ last_updated_age }}{% endif %}
+                {% if price_source %} &bull; prices via {{ price_source|upper }}{% endif %}
+                &bull; live refresh 60s
+            </small>
         </div>
     </div>
 
@@ -98,25 +102,29 @@
                 </thead>
                 <tbody>
                     {% for coin in coins %}
-                    <tr>
-                        <td class="text-muted">{{ loop.index }}</td>
+                    <tr data-coin-id="{{ coin['id'] }}">
+                        <td class="text-muted">{{ coin.get('market_cap_rank') or ((page - 1) * per_page + loop.index) }}</td>
                         <td>
                             <div class="d-flex align-items-center">
-                                <img src="{{ coin['image'] }}"
+                                <img src="{{ coin['image'] or 'https://via.placeholder.com/26' }}"
                                      width="26" height="26"
                                      class="me-2 rounded-circle flex-shrink-0"
                                      alt="{{ coin['symbol'] }} logo"
                                      onerror="this.src='https://via.placeholder.com/26'">
                                 <div class="min-w-0">
                                     <strong class="d-block text-truncate">{{ coin['name'] }}</strong>
-                                    <small class="text-muted">{{ coin['symbol'].upper() }}</small>
+                                    <small class="text-muted">{{ coin['symbol']|upper }}</small>
                                 </div>
                             </div>
                         </td>
-                        <td class="text-end text-nowrap">
+                        <td class="text-end text-nowrap js-price">
+                            {% if coin.get('current_price') is not none %}
                             <strong>${{ "{:,.2f}".format(coin['current_price']) }}</strong>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
                         </td>
-                        <td class="text-end text-nowrap">
+                        <td class="text-end text-nowrap js-change">
                             {% set change = coin.get('price_change_percentage_24h', 0) or 0 %}
                             <span class="{{ 'text-green' if change >= 0 else 'text-red' }} fw-bold">
                                 {{ "%.2f"|format(change) }}%
@@ -131,8 +139,8 @@
                             {{ coin.get('total_volume', 0) | compact_usd }}
                         </td>
                         <td class="text-end text-nowrap d-none d-lg-table-cell">
-                            {% set high = coin['high_24h'] %}
-                            {% if high is not none %}
+                            {% set high = coin.get('high_24h') %}
+                            {% if high is not none and coin.get('current_price') is not none %}
                             <span class="{{ 'text-green' if high >= coin['current_price'] else 'text-red' }}"
                                   title="${{ '{:,.2f}'.format(high) }}">
                                 {{ high | compact_usd }}
@@ -142,8 +150,8 @@
                             {% endif %}
                         </td>
                         <td class="text-end text-nowrap d-none d-lg-table-cell">
-                            {% set low = coin['low_24h'] %}
-                            {% if low is not none %}
+                            {% set low = coin.get('low_24h') %}
+                            {% if low is not none and coin.get('current_price') is not none %}
                             <span class="{{ 'text-green' if low >= coin['current_price'] else 'text-red' }}"
                                   title="${{ '{:,.2f}'.format(low) }}">
                                 {{ low | compact_usd }}
@@ -173,6 +181,29 @@
         </div>
         <div class="table-scroll-fade d-md-none" aria-hidden="true"></div>
     </div>
+
+    {% if total_pages and total_pages > 1 %}
+    <nav class="mt-3" aria-label="Market pages">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('cg.index', page=page - 1, per_page=per_page) }}">Prev</a>
+            </li>
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page or p <= 2 or p > total_pages - 2 or (p >= page - 1 and p <= page + 1) %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('cg.index', page=p, per_page=per_page) }}">{{ p }}</a>
+                </li>
+                {% elif p == 3 or p == total_pages - 2 %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('cg.index', page=page + 1, per_page=per_page) }}">Next</a>
+            </li>
+        </ul>
+        <p class="text-center text-muted small">Showing page {{ page }} of {{ total_pages }} ({{ total }} coins)</p>
+    </nav>
+    {% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -181,6 +212,7 @@
     const table = document.getElementById('cryptoTable');
     const scrollWrap = document.getElementById('marketTableWrap');
     const scrollArea = document.getElementById('marketTableScroll');
+    const freshnessLabel = document.getElementById('freshnessLabel');
 
     searchInput.addEventListener('input', function () {
         const filter = this.value.toLowerCase();
@@ -211,5 +243,52 @@
         window.addEventListener('resize', updateScrollHint);
         updateScrollHint();
     }
+
+    function formatPrice(value) {
+        if (value == null || Number.isNaN(Number(value))) return '—';
+        return '$' + Number(value).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    async function refreshLivePrices() {
+        const rows = Array.from(table.querySelectorAll('tbody tr[data-coin-id]'));
+        const ids = rows.map((row) => row.getAttribute('data-coin-id')).filter(Boolean);
+        if (!ids.length) return;
+
+        try {
+            const response = await fetch('/api/live-prices?ids=' + encodeURIComponent(ids.join(',')));
+            if (!response.ok) return;
+            const payload = await response.json();
+            const prices = payload.prices || {};
+            rows.forEach((row) => {
+                const id = row.getAttribute('data-coin-id');
+                const info = prices[id];
+                if (!info || info.price == null) return;
+                const priceCell = row.querySelector('.js-price');
+                if (priceCell) {
+                    priceCell.innerHTML = '<strong>' + formatPrice(info.price) + '</strong>';
+                }
+                if (info.percent_change_24h != null) {
+                    const changeCell = row.querySelector('.js-change');
+                    if (changeCell) {
+                        const change = Number(info.percent_change_24h);
+                        const cls = change >= 0 ? 'text-green' : 'text-red';
+                        changeCell.innerHTML = '<span class="' + cls + ' fw-bold">' +
+                            change.toFixed(2) + '%</span>';
+                    }
+                }
+            });
+            if (freshnessLabel && payload.last_updated_age) {
+                freshnessLabel.textContent = 'Updated ' + payload.last_updated_age +
+                    ' • live refresh 60s';
+            }
+        } catch (err) {
+            // ignore transient refresh errors
+        }
+    }
+
+    setInterval(refreshLivePrices, 60000);
 </script>
 {% endblock %}
