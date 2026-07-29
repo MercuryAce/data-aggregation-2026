@@ -84,4 +84,34 @@ beat_schedule = {
         "schedule": 60 * 60,
         "kwargs": {"limit": 20, "slugs": "bitcoin,ethereum"},
     },
+    # Alpha Vantage — sparse for free-tier ~5 req/min / ~25 req/day
+    "sync-av-news": {
+        "task": "tasks.sync_tasks.sync_av_news",
+        "schedule": 60 * 60,
+        "kwargs": {
+            "topics": "blockchain",
+            "tickers": "CRYPTO:BTC,CRYPTO:ETH",
+            "limit": 50,
+        },
+    },
+    "sync-av-fx": {
+        "task": "tasks.sync_tasks.sync_av_fx",
+        "schedule": 30 * 60,
+        "kwargs": {"pairs": "BTC/USD,ETH/USD,USD/EUR"},
+    },
+    "sync-av-metals": {
+        "task": "tasks.sync_tasks.sync_av_metals",
+        "schedule": 30 * 60,
+        "kwargs": {"symbols": "GOLD,SILVER"},
+    },
+    "sync-av-etf": {
+        "task": "tasks.sync_tasks.sync_av_etf",
+        "schedule": 24 * 60 * 60,
+        "kwargs": {"etfs": "IBIT,FBTC,GLD,SLV"},
+    },
+    "sync-av-crypto-daily": {
+        "task": "tasks.sync_tasks.sync_av_crypto_daily",
+        "schedule": 6 * 60 * 60,
+        "kwargs": {"symbols": "BTC,ETH", "market": "USD"},
+    },
 }

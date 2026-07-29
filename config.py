@@ -26,6 +26,12 @@ class Config:
     CMC_BASE_URL = os.getenv("CMC_BASE_URL", "https://pro-api.coinmarketcap.com/v1")
     CMC_REQUEST_TIMEOUT = int(os.getenv("CMC_REQUEST_TIMEOUT", "15"))
 
+    ALPHAVANTAGE_API_KEY = os.getenv("ALPHAVANTAGE_API_KEY")
+    ALPHAVANTAGE_BASE_URL = os.getenv(
+        "ALPHAVANTAGE_BASE_URL", "https://www.alphavantage.co/query"
+    )
+    ALPHAVANTAGE_REQUEST_TIMEOUT = int(os.getenv("ALPHAVANTAGE_REQUEST_TIMEOUT", "15"))
+
     MONGODB_URI = os.getenv("MONGODB_URI", "")
     MONGODB_DB = os.getenv("MONGODB_DB", "cryptodash")
     # X.509 client cert for Atlas (absolute or project-relative path)

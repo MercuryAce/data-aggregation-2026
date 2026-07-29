@@ -11,6 +11,7 @@ import markdown
 
 from handlers.errors import register_error_handlers
 from utils.formatters import compact_number, compact_usd
+from sqlalchemy import text
 
 load_dotenv()
 
@@ -43,17 +44,26 @@ limiter = Limiter(
 )
 
 # === Database Configuration ===
+# Pin via DATABASE_URI in .env so Flask, Celery, and sync scripts share one file.
 os.makedirs(app.instance_path, exist_ok=True)
 default_db_path = os.path.join(app.instance_path, "cache.db")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
-    "DATABASE_URI",
-    f"sqlite:///{default_db_path}",
-)
+database_uri = os.environ.get("DATABASE_URI") or f"sqlite:///{default_db_path}"
+app.config["SQLALCHEMY_DATABASE_URI"] = database_uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-# Create db instance
+if database_uri.startswith("sqlite"):
+    # Allow Flask + Celery + sync CLI to share the same file DB.
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "connect_args": {"check_same_thread": False},
+    }
+
 db.init_app(app)
 with app.app_context():
     db.create_all()
+    if database_uri.startswith("sqlite"):
+        # WAL survives process restarts and is safer under concurrent writers.
+        db.session.execute(text("PRAGMA journal_mode=WAL"))
+        db.session.execute(text("PRAGMA synchronous=NORMAL"))
+        db.session.commit()
 
 def init_markdown(app):
     @app.template_filter('markdown')

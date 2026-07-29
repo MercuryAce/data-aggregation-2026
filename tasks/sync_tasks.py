@@ -28,6 +28,13 @@ from scripts.sync_messari import (
     sync_asset_details,
     sync_assets,
 )
+from scripts.sync_alphavantage import (
+    sync_crypto_daily,
+    sync_etf,
+    sync_fx,
+    sync_metals,
+    sync_news,
+)
 from services import id_map
 
 
@@ -139,3 +146,36 @@ def sync_messari_task(**kwargs):
     slugs = kwargs.get("slugs", "bitcoin,ethereum")
     _run_sync(sync_assets, limit=limit, page=1)
     _run_sync(sync_asset_details, slugs)
+
+
+@celery.task(name="tasks.sync_tasks.sync_av_news")
+def sync_av_news_task(**kwargs):
+    topics = kwargs.get("topics", "blockchain")
+    tickers = kwargs.get("tickers", "CRYPTO:BTC,CRYPTO:ETH")
+    limit = kwargs.get("limit", 50)
+    _run_sync(sync_news, topics=topics, tickers=tickers, limit=limit)
+
+
+@celery.task(name="tasks.sync_tasks.sync_av_etf")
+def sync_av_etf_task(**kwargs):
+    etfs = kwargs.get("etfs", "IBIT,FBTC,GLD,SLV")
+    _run_sync(sync_etf, etfs=etfs)
+
+
+@celery.task(name="tasks.sync_tasks.sync_av_fx")
+def sync_av_fx_task(**kwargs):
+    pairs = kwargs.get("pairs", "BTC/USD,ETH/USD,USD/EUR,USD/JPY,USD/GBP")
+    _run_sync(sync_fx, pairs=pairs)
+
+
+@celery.task(name="tasks.sync_tasks.sync_av_crypto_daily")
+def sync_av_crypto_daily_task(**kwargs):
+    symbols = kwargs.get("symbols", "BTC,ETH")
+    market = kwargs.get("market", "USD")
+    _run_sync(sync_crypto_daily, symbols=symbols, market=market)
+
+
+@celery.task(name="tasks.sync_tasks.sync_av_metals")
+def sync_av_metals_task(**kwargs):
+    symbols = kwargs.get("symbols", "GOLD,SILVER")
+    _run_sync(sync_metals, symbols=symbols)
