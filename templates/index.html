@@ -3,7 +3,7 @@
 {% block title %}Live Crypto Prices{% endblock %}
 
 {% block content %}
-    {% with title="Live Cryptocurrency Prices", subtitle="Market data from CoinGecko" %}
+    {% with title="Live Cryptocurrency Prices", subtitle="Ranked by CoinGecko · live metrics from CMC" %}
         {% include "partials/page_header.html" %}
     {% endwith %}
 
@@ -115,24 +115,28 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="text-end text-nowrap js-price">
-                            {% if coin.get('current_price') is not none %}
-                            <strong>${{ "{:,.2f}".format(coin['current_price']) }}</strong>
-                            {% else %}
-                            <span class="text-muted">—</span>
-                            {% endif %}
+                        <td class="text-end text-nowrap">
+                            <span class="js-price price-cell"
+                                  data-price="{{ coin.get('current_price') if coin.get('current_price') is not none else '' }}">
+                                {% if coin.get('current_price') is not none %}
+                                <strong>${{ "{:,.2f}".format(coin['current_price']) }}</strong>
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
+                            </span>
                         </td>
-                        <td class="text-end text-nowrap js-change">
+                        <td class="text-end text-nowrap">
                             {% set change = coin.get('price_change_percentage_24h', 0) or 0 %}
-                            <span class="{{ 'text-green' if change >= 0 else 'text-red' }} fw-bold">
+                            <span class="js-change fw-bold {{ 'text-green' if change >= 0 else 'text-red' }}"
+                                  data-change="{{ change }}">
                                 {{ "%.2f"|format(change) }}%
                             </span>
                         </td>
-                        <td class="text-end text-nowrap"
+                        <td class="text-end text-nowrap js-mcap"
                             title="${{ '{:,.0f}'.format(coin.get('market_cap', 0) or 0) }}">
                             {{ coin.get('market_cap', 0) | compact_usd }}
                         </td>
-                        <td class="text-end text-nowrap"
+                        <td class="text-end text-nowrap js-volume"
                             title="${{ '{:,.0f}'.format(coin.get('total_volume', 0) or 0) }}">
                             {{ coin.get('total_volume', 0) | compact_usd }}
                         </td>
@@ -210,6 +214,9 @@
     const table = document.getElementById('cryptoTable');
     const scrollWrap = document.getElementById('marketTableWrap');
     const scrollArea = document.getElementById('marketTableScroll');
+    const freshnessLabel = document.getElementById('freshnessLabel');
+    const POLL_MS = 15000;
+    const pageNum = {{ page | default(1) }};
 
     searchInput.addEventListener('input', function () {
         const filter = this.value.toLowerCase();
@@ -240,5 +247,109 @@
         window.addEventListener('resize', updateScrollHint);
         updateScrollHint();
     }
+
+    function compactUsd(value) {
+        if (value == null || Number.isNaN(Number(value))) return '—';
+        const n = Math.abs(Number(value));
+        const sign = Number(value) < 0 ? '-' : '';
+        const units = [
+            [1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K'],
+        ];
+        for (const [threshold, suffix] of units) {
+            if (n >= threshold) {
+                const scaled = (n / threshold).toFixed(1).replace(/\.0$/, '');
+                return `$${sign}${scaled}${suffix}`;
+            }
+        }
+        return `$${sign}${Math.round(n)}`;
+    }
+
+    function flashPrice(el, html) {
+        el.classList.remove('is-pop');
+        el.classList.add('is-out');
+        window.setTimeout(() => {
+            el.innerHTML = html;
+            el.classList.remove('is-out');
+            el.classList.add('is-pop');
+            const done = () => {
+                el.classList.remove('is-pop');
+                el.removeEventListener('animationend', done);
+            };
+            el.addEventListener('animationend', done);
+        }, 140);
+    }
+
+    function applyPrices(payload) {
+        const prices = payload.prices || {};
+        Object.keys(prices).forEach((id) => {
+            const row = table.querySelector(`tr[data-coin-id="${CSS.escape(id)}"]`);
+            if (!row) return;
+            const data = prices[id];
+            const priceEl = row.querySelector('.js-price');
+            const changeEl = row.querySelector('.js-change');
+            const mcapEl = row.querySelector('.js-mcap');
+            const volEl = row.querySelector('.js-volume');
+
+            if (priceEl) {
+                const prev = priceEl.dataset.price;
+                const next = data.price == null ? '' : String(data.price);
+                const changed = prev === '' || next === ''
+                    ? prev !== next
+                    : Number(prev) !== Number(next);
+                if (changed) {
+                    priceEl.dataset.price = next;
+                    const html = data.price_display
+                        ? `<strong>${data.price_display}</strong>`
+                        : '<span class="text-muted">—</span>';
+                    // Skip flash on first successful hydrate when values match display already
+                    if (prev === '') {
+                        priceEl.innerHTML = html;
+                    } else {
+                        flashPrice(priceEl, html);
+                    }
+                }
+            }
+
+            if (changeEl && data.change_24h != null) {
+                const prev = changeEl.dataset.change;
+                const next = String(data.change_24h);
+                if (prev !== next) {
+                    changeEl.dataset.change = next;
+                    const up = Number(data.change_24h) >= 0;
+                    changeEl.classList.toggle('text-green', up);
+                    changeEl.classList.toggle('text-red', !up);
+                    changeEl.textContent = `${Number(data.change_24h).toFixed(2)}%`;
+                }
+            }
+
+            if (mcapEl && data.market_cap != null) {
+                mcapEl.textContent = compactUsd(data.market_cap);
+                mcapEl.title = `$${Math.round(data.market_cap).toLocaleString()}`;
+            }
+            if (volEl && data.total_volume != null) {
+                volEl.textContent = compactUsd(data.total_volume);
+                volEl.title = `$${Math.round(data.total_volume).toLocaleString()}`;
+            }
+        });
+
+        if (freshnessLabel && payload.updated_at) {
+            freshnessLabel.textContent = `Updated ${payload.updated_at}`;
+        }
+    }
+
+    async function pollPrices() {
+        try {
+            const res = await fetch(`/api/markets/prices?page=${pageNum}`, {
+                headers: { Accept: 'application/json' },
+            });
+            if (!res.ok) return;
+            applyPrices(await res.json());
+        } catch (_) {
+            /* ignore transient poll errors */
+        }
+    }
+
+    pollPrices();
+    window.setInterval(pollPrices, POLL_MS);
 </script>
 {% endblock %}

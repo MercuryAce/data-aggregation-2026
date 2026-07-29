@@ -57,6 +57,15 @@ Selective:
 ./venv/bin/python scripts/populate_views.py --tables markets,exchanges,trending,categories
 ```
 
+Patch live Markets metrics from CMC (keeps CoinGecko rank / row identity):
+
+```bash
+./venv/bin/python scripts/populate_views.py --patch-cmc
+```
+
+Celery (with Redis) schedules **CG structure every 30 min** and **CMC metrics every 12 min**.
+The Markets page polls `/api/markets/prices` every 15s and flashes updated prices.
+
 | Table | Page |
 |-------|------|
 | `market_coins` + `global_stats` | `/` |

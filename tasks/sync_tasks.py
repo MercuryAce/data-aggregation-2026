@@ -12,6 +12,7 @@ from scripts.sync_coingecko import (
 )
 from scripts.sync_cmc import sync_listings as sync_cmc_listings
 from scripts.sync_cmc import sync_map as sync_cmc_map
+from services import populate_cmc, populate_coingecko
 from scripts.sync_defillama import (
     sync_chains,
     sync_current_prices,
@@ -51,6 +52,27 @@ def _run_sync(func, *args, **kwargs):
 @celery.task(name="tasks.sync_tasks.sync_markets")
 def sync_markets_task(**kwargs):
     _run_sync(sync_markets, **kwargs)
+
+
+@celery.task(name="tasks.sync_tasks.populate_markets_structure")
+def populate_markets_structure_task(**kwargs):
+    """CoinGecko → MySQL market_coins + global_stats (rank / structure)."""
+    pages = kwargs.get("pages", 4)
+    per_page = kwargs.get("per_page", 250)
+
+    def _run():
+        populate_coingecko.populate_markets(pages=pages, per_page=per_page)
+        populate_coingecko.populate_global()
+
+    _run_sync(_run)
+
+
+@celery.task(name="tasks.sync_tasks.patch_market_metrics_cmc")
+def patch_market_metrics_cmc_task(**kwargs):
+    """CMC → UPDATE price metrics on existing market_coins (keep CG rank)."""
+    start = kwargs.get("start", 1)
+    limit = kwargs.get("limit", 500)
+    _run_sync(populate_cmc.patch_market_metrics, start=start, limit=limit)
 
 
 @celery.task(name="tasks.sync_tasks.sync_trending")

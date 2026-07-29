@@ -155,3 +155,35 @@ def test_views_trending_reads_snapshot(client, no_request_guard, monkeypatch, ap
     response = client.get("/trending")
     assert response.status_code == 200
     assert b"Solana" in response.data
+
+
+def test_market_prices_api(client, no_request_guard, app):
+    from models import MarketCoin, db
+
+    with app.app_context():
+        db.session.add(
+            MarketCoin(
+                cg_id="bitcoin",
+                symbol="btc",
+                name="Bitcoin",
+                market_cap_rank=1,
+                current_price=42.5,
+                price_change_percentage_24h=1.25,
+                market_cap=1e12,
+                total_volume=1e9,
+                synced_at=_now(),
+                source="cmc",
+            )
+        )
+        db.session.commit()
+
+    response = client.get("/api/markets/prices?ids=bitcoin")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "bitcoin" in data["prices"]
+    assert data["prices"]["bitcoin"]["price"] == 42.5
+    assert data["prices"]["bitcoin"]["price_display"].startswith("$")
+
+    by_page = client.get("/api/markets/prices?page=1")
+    assert by_page.status_code == 200
+    assert "bitcoin" in by_page.get_json()["prices"]

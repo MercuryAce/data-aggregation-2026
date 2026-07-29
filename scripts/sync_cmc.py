@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 TTL_LISTINGS = 2 * 60
 TTL_MAP = 24 * 60 * 60
 SOURCE = "cmc"
-PAGE_SIZE = 100
+PAGE_SIZE = 200  # 1 CMC credit per 200 coins returned
 
 
 def _usd_quote(item: dict) -> dict:

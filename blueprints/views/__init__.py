@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, request
+from flask import Blueprint, jsonify, request
 from flask_caching import Cache
 
 from handlers.guards import (
@@ -18,6 +18,21 @@ from services.cache_store import CacheMissError
 views_bp = Blueprint("views", __name__, url_prefix="")
 
 MARKETS_PER_PAGE = 100
+
+
+def _format_price(value) -> str | None:
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    abs_n = abs(number)
+    if abs_n >= 1:
+        return f"{number:,.2f}"
+    if abs_n >= 0.01:
+        return f"{number:,.4f}"
+    return f"{number:.8f}".rstrip("0").rstrip(".")
 
 
 def init_views_blueprint(cache: Cache, limiter=None):
@@ -71,6 +86,58 @@ def init_views_blueprint(cache: Cache, limiter=None):
             }
 
         return guarded_render("index.html", fetch_context)
+
+    @views_bp.route("/api/markets/prices")
+    @rate_limit(limiter, view_limit, kind="views")
+    def market_prices():
+        """Lightweight JSON for reactive Markets price updates."""
+        guard_request("market_prices_last_hit")
+        ids_raw = (request.args.get("ids") or "").strip()
+        page = request.args.get("page", default=None, type=int)
+
+        query = db.session.query(MarketCoin)
+        if ids_raw:
+            ids = [part.strip() for part in ids_raw.split(",") if part.strip()]
+            if not ids:
+                return jsonify({"prices": {}, "updated_at": None})
+            query = query.filter(MarketCoin.cg_id.in_(ids))
+        elif page is not None:
+            page_num = max(1, page)
+            query = (
+                query.order_by(MarketCoin.market_cap_rank.asc())
+                .offset((page_num - 1) * MARKETS_PER_PAGE)
+                .limit(MARKETS_PER_PAGE)
+            )
+        else:
+            return jsonify({"error": "Provide ids= or page="}), 400
+
+        rows = query.all()
+        prices = {}
+        latest = None
+        for row in rows:
+            synced = row.synced_at.isoformat() if row.synced_at else None
+            if row.synced_at and (latest is None or row.synced_at > latest):
+                latest = row.synced_at
+            prices[row.cg_id] = {
+                "price": row.current_price,
+                "price_display": (
+                    f"${_format_price(row.current_price)}"
+                    if row.current_price is not None
+                    else None
+                ),
+                "change_24h": row.price_change_percentage_24h,
+                "market_cap": row.market_cap,
+                "total_volume": row.total_volume,
+                "source": row.source,
+                "synced_at": synced,
+            }
+
+        return jsonify(
+            {
+                "prices": prices,
+                "updated_at": latest.isoformat() if latest else None,
+            }
+        )
 
     @views_bp.route("/exchanges")
     @cache.cached(timeout=120, response_filter=only_cache_success)

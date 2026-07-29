@@ -17,11 +17,21 @@ accept_content = ["json"]
 task_acks_late = True
 worker_prefetch_multiplier = 1
 
-# Tiered schedule — CG cold structure, CMC/DefiLlama for live prices
+# Markets: CG structure ~30m, CMC metrics ~12m (Basic ~15k credits/mo)
 beat_schedule = {
+    "populate-markets-structure": {
+        "task": "tasks.sync_tasks.populate_markets_structure",
+        "schedule": 30 * 60,          # CG rank / identity / supplies
+        "kwargs": {"pages": 4, "per_page": 250},
+    },
+    "patch-market-metrics-cmc": {
+        "task": "tasks.sync_tasks.patch_market_metrics_cmc",
+        "schedule": 12 * 60,          # live price / mcap / volume on market_coins
+        "kwargs": {"start": 1, "limit": 500},
+    },
     "sync-cmc-listings": {
         "task": "tasks.sync_tasks.sync_cmc_listings",
-        "schedule": 2 * 60,           # every 2 min — live ranked prices
+        "schedule": 12 * 60,          # ApiCache mirror (same cadence as MySQL patch)
         "kwargs": {"start": 1, "limit": 500},
     },
     "sync-cmc-map": {
@@ -34,8 +44,8 @@ beat_schedule = {
     },
     "sync-markets-global": {
         "task": "tasks.sync_tasks.sync_markets",
-        "schedule": 60 * 60,          # hourly CG structure (multi-page)
-        "kwargs": {"pages": 10, "limit": 250},
+        "schedule": 60 * 60,          # ApiCache CG markets (coin detail path)
+        "kwargs": {"pages": 4, "limit": 250},
     },
     "sync-trending-categories": {
         "task": "tasks.sync_tasks.sync_trending_categories",
