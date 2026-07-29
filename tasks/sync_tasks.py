@@ -6,6 +6,7 @@ from scripts.sync_coingecko import (
     sync_trending,
     sync_categories,
     sync_exchanges,
+    sync_exchange_details,
     sync_top_coin_details,
     sync_ohlc,
     sync_popular_searches,
@@ -75,6 +76,24 @@ def patch_market_metrics_cmc_task(**kwargs):
     _run_sync(populate_cmc.patch_market_metrics, start=start, limit=limit)
 
 
+@celery.task(name="tasks.sync_tasks.populate_exchanges")
+def populate_exchanges_task(**kwargs):
+    """CoinGecko → MySQL exchanges table."""
+    _run_sync(populate_coingecko.populate_exchanges, **kwargs)
+
+
+@celery.task(name="tasks.sync_tasks.populate_trending")
+def populate_trending_task():
+    """CoinGecko → MySQL trending snapshot."""
+    _run_sync(populate_coingecko.populate_trending)
+
+
+@celery.task(name="tasks.sync_tasks.populate_categories")
+def populate_categories_task():
+    """CoinGecko → MySQL categories table."""
+    _run_sync(populate_coingecko.populate_categories)
+
+
 @celery.task(name="tasks.sync_tasks.sync_trending")
 def sync_trending_task():
     _run_sync(sync_trending)
@@ -94,6 +113,12 @@ def sync_trending_categories_task():
 @celery.task(name="tasks.sync_tasks.sync_exchanges")
 def sync_exchanges_task():
     _run_sync(sync_exchanges)
+
+
+@celery.task(name="tasks.sync_tasks.sync_exchange_details")
+def sync_exchange_details_task(**kwargs):
+    limit = kwargs.get("limit", 20)
+    _run_sync(sync_exchange_details, limit=limit)
 
 
 @celery.task(name="tasks.sync_tasks.sync_top_coin_details")

@@ -35,7 +35,4 @@ class Config:
     MONGODB_URI = os.getenv("MONGODB_URI", "")
     MONGODB_DB = os.getenv("MONGODB_DB", "cryptodash")
     # X.509 client cert for Atlas (absolute or project-relative path)
-    MONGODB_TLS_CERT_FILE = os.getenv(
-        "MONGODB_TLS_CERT_FILE",
-        "certificates/X509-cert-8717029446821884498.pem",
-    )
+    MONGODB_TLS_CERT_FILE = os.getenv("MONGODB_TLS_CERT_FILE", "")

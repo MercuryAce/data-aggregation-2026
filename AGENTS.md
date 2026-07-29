@@ -20,18 +20,20 @@ cg blueprint (remaining) --> ApiCache / CG for coin detail, search, news, exchan
 - **Populate** [`services/populate_coingecko.py`](services/populate_coingecko.py) +
   CLI [`scripts/populate_views.py`](scripts/populate_views.py). Uses `sync_locks` to prevent
   concurrent first-fill stampedes.
-- **`api_cache`** still used for coin detail / search / OHLC (legacy CG cache path).
-- **Other clients** (CMC, AV, DefiLlama, Messari, LunarCrush) remain for Phase 5 writers.
+- **`api_cache`** used for coin detail / search / OHLC / exchange detail. On miss these
+  routes **live-fetch CoinGecko once** and store the result (best-effort; burns Demo credits).
+- **Other clients** (Messari, DefiLlama, LunarCrush, AV) remain for optional writers.
 - Error pages: `templates/errors/` via `handlers/errors.py`.
+- **Secrets:** `.env` must not be committed; use `.env.example`. Rotate keys if they were ever pushed.
 
 ### Main view tables
 
 | Table | Populated by | Served by |
 |-------|--------------|-----------|
-| `market_coins` + `global_stats` | `ensure_markets` | `/` |
-| `exchanges` | `ensure_exchanges` | `/exchanges` |
-| `trending_snapshots` (+ `trending_coins`) | `ensure_trending` | `/trending` |
-| `categories` | `ensure_categories` | `/categories` |
+| `market_coins` + `global_stats` | `ensure_markets` / Celery 30m + CMC 12m | `/` |
+| `exchanges` | `ensure_exchanges` / Celery daily | `/exchanges` |
+| `trending_snapshots` (+ `trending_coins`) | `ensure_trending` / Celery hourly | `/trending` |
+| `categories` | `ensure_categories` / Celery daily | `/categories` |
 
 ## Cursor Cloud specific instructions
 

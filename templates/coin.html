@@ -44,6 +44,7 @@
                     Updated {{ last_updated }}
                 </small>
                 {% endif %}
+                <small class="text-muted d-block">Detail pages: cached · live-fill on miss</small>
             </div>
 
         </div>
@@ -164,6 +165,26 @@
                 <p class="mb-0 lst-dark spc-1">{{ coin.get('description', {}).get('en', 'No description available.') }}</p>
             </div>
         </div>
+
+        <!-- News -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row mt-1">
+                    <div class="col-12">
+                        <iframe 
+                            width="100%"
+                            scrolling="yes"
+                            allowtransparency="true"
+                            frameborder="0"
+                            src="https://cryptopanic.com/widgets/news/?bg_color=161B22&amp;currencies={{ coin.get('symbol') }}&amp;font_family=sans&amp;header_bg_color=30343B&amp;header_text_color=8B949E&amp;link_color=0091C2&amp;news_feed=recent&amp;posts_limit=10&amp;text_color=E6EDF3&amp;title={{ coin.get('name') }}%20Latest%20News"
+                            height="585px"
+                            title="{{ coin.get('name') }} news">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Sidebar -->
@@ -252,18 +273,22 @@
                         <span>{{ coin.get('block_time_in_minutes', 'N/A') }} minutes</span>
                     </li>
                 </ul>
-
+                <hr>
                 <div class="mb-3">
-                    <div class="small mb-1 wt">Categories</div>
+                    <div class="card-subtitle">
+                        <h5 class="mb-1 wt">Categories</h5>
+                    </div>
                     {% for cat in coin.get('categories', []) %}
                         <span class="badge bg-secondary me-1 mb-1 wt">{{ cat }}</span>
                     {% else %}
                         <span class="text-muted wt">N/A</span>
                     {% endfor %}
                 </div>
-
+                <hr>
                 <div>
-                    <div class="small text-muted mb-1">Links</div>
+                    <div class="card-subtitle">
+                        <h5 class="mb-1 wt">Links</h5>
+                    </div>
                     {% if coin.get('links', {}).get('homepage') and coin['links']['homepage'][0] %}
                         <a href="{{ coin['links']['homepage'][0] }}" target="_blank" rel="noopener" class="d-block mb-1">Official Website</a>
                     {% endif %}

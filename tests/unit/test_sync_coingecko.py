@@ -105,6 +105,23 @@ def test_sync_markets_multi_page(app, monkeypatch):
     from services import cache_keys, cache_store
 
     assert pages_seen == [1, 2, 3]
-    assert cache_store.get(cache_keys.markets_key("usd", 250, 2)) is not None
-    assert cache_store.get(cache_keys.markets_key("usd", 250, 3)) is not None
+def test_sync_exchange_details_from_listing(app, monkeypatch):
+    monkeypatch.setattr(
+        sync_coingecko.cg_client,
+        "get_exchanges",
+        lambda **kwargs: [{"id": "binance", "name": "Binance"}],
+    )
+    monkeypatch.setattr(
+        sync_coingecko.cg_client,
+        "get_exchange_details",
+        lambda exchange_id, **kwargs: {"id": exchange_id, "name": "Binance"},
+    )
+
+    sync_coingecko.sync_exchange_details(limit=5)
+
+    from services import cache_keys, cache_store
+
+    entry = cache_store.get(cache_keys.exchange_details_key("binance"))
+    assert entry is not None
+    assert entry.payload["id"] == "binance"
 

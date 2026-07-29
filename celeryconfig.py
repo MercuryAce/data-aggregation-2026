@@ -42,32 +42,38 @@ beat_schedule = {
         "task": "tasks.sync_tasks.sync_asset_id_map",
         "schedule": 6 * 60 * 60,
     },
-    "sync-markets-global": {
-        "task": "tasks.sync_tasks.sync_markets",
-        "schedule": 60 * 60,          # ApiCache CG markets (coin detail path)
-        "kwargs": {"pages": 4, "limit": 250},
+    # MySQL view tables (pages read these; avoid duplicate ApiCache CG hits)
+    "populate-trending": {
+        "task": "tasks.sync_tasks.populate_trending",
+        "schedule": 60 * 60,          # ~1h — trending churns
     },
-    "sync-trending-categories": {
-        "task": "tasks.sync_tasks.sync_trending_categories",
-        "schedule": 60 * 60,
+    "populate-exchanges": {
+        "task": "tasks.sync_tasks.populate_exchanges",
+        "schedule": 24 * 60 * 60,     # daily
     },
-    "sync-exchanges": {
-        "task": "tasks.sync_tasks.sync_exchanges",
-        "schedule": 4 * 60 * 60,
+    "populate-categories": {
+        "task": "tasks.sync_tasks.populate_categories",
+        "schedule": 24 * 60 * 60,     # daily
+    },
+    # ApiCache warmers for secondary routes (lazy-fill covers misses)
+    "sync-exchange-details": {
+        "task": "tasks.sync_tasks.sync_exchange_details",
+        "schedule": 24 * 60 * 60,
+        "kwargs": {"limit": 20},
     },
     "sync-top-coins": {
         "task": "tasks.sync_tasks.sync_top_coins",
-        "schedule": 2 * 60 * 60,
-        "kwargs": {"limit": 30},      # quota-safe detail refresh
+        "schedule": 24 * 60 * 60,     # daily prewarm; misses live-fill
+        "kwargs": {"limit": 15},
     },
     "sync-ohlc": {
         "task": "tasks.sync_tasks.sync_ohlc",
-        "schedule": 6 * 60 * 60,
-        "kwargs": {"limit": 20, "days": 30},
+        "schedule": 24 * 60 * 60,
+        "kwargs": {"limit": 10, "days": 30},
     },
     "sync-search": {
         "task": "tasks.sync_tasks.sync_search",
-        "schedule": 4 * 60 * 60,
+        "schedule": 24 * 60 * 60,
     },
     "sync-defillama-protocols": {
         "task": "tasks.sync_tasks.sync_defillama_protocols",

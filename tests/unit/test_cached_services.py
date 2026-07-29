@@ -45,6 +45,35 @@ def test_coingecko_search_empty_query_raises():
         coingecko_service.get_search("")
 
 
+def test_coin_details_live_fills_on_miss(app, monkeypatch):
+    calls = {"n": 0}
+
+    def fake_details(coin_id, vs_currency="usd"):
+        calls["n"] += 1
+        return {"id": coin_id, "name": "Bitcoin"}
+
+    monkeypatch.setattr(coingecko_service.cg_client, "get_coin_details", fake_details)
+
+    data, _ = coingecko_service.get_coin_details("bitcoin")
+    assert data["id"] == "bitcoin"
+    assert calls["n"] == 1
+
+    # Second call should hit cache
+    data2, _ = coingecko_service.get_coin_details("bitcoin")
+    assert data2["id"] == "bitcoin"
+    assert calls["n"] == 1
+
+
+def test_coin_details_live_fill_failure_raises(app, monkeypatch):
+    def boom(*args, **kwargs):
+        raise RuntimeError("upstream down")
+
+    monkeypatch.setattr(coingecko_service.cg_client, "get_coin_details", boom)
+
+    with pytest.raises(CacheMissError, match="live fetch failed"):
+        coingecko_service.get_coin_details("nope")
+
+
 def test_messari_cached_miss_raises(app):
     with pytest.raises(CacheMissError):
         messari_service.get_assets(limit=20, page=1)

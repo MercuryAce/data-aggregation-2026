@@ -25,6 +25,9 @@
                     <span class="badge bg-secondary">{{ exchange.country }}</span>
                     <span class="badge bg-info">{{ exchange.year_established }}</span>
                 </div>
+                {% if last_updated %}
+                <small class="text-muted d-block mt-2">Updated {{ last_updated }} · cached / live-fill</small>
+                {% endif %}
             </div>
         </div>
     </div>

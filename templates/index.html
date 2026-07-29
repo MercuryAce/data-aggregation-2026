@@ -116,12 +116,12 @@
                             </div>
                         </td>
                         <td class="text-end text-nowrap">
-                            <span class="js-price price-cell"
+                            <span class="js-price price-cell small"
                                   data-price="{{ coin.get('current_price') if coin.get('current_price') is not none else '' }}">
                                 {% if coin.get('current_price') is not none %}
-                                <strong>${{ "{:,.2f}".format(coin['current_price']) }}</strong>
+                                    ${{ "{:,.8f}".format(coin['current_price']) }}
                                 {% else %}
-                                <span class="text-muted">—</span>
+                                    <span class="text-muted">—</span>
                                 {% endif %}
                             </span>
                         </td>
@@ -299,7 +299,7 @@
                 if (changed) {
                     priceEl.dataset.price = next;
                     const html = data.price_display
-                        ? `<strong>${data.price_display}</strong>`
+                        ? `${data.price_display}`
                         : '<span class="text-muted">—</span>';
                     // Skip flash on first successful hydrate when values match display already
                     if (prev === '') {

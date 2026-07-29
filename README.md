@@ -63,7 +63,18 @@ Patch live Markets metrics from CMC (keeps CoinGecko rank / row identity):
 ./venv/bin/python scripts/populate_views.py --patch-cmc
 ```
 
-Celery (with Redis) schedules **CG structure every 30 min** and **CMC metrics every 12 min**.
+Celery (with Redis) schedules:
+
+| Job | Cadence | Target |
+|-----|---------|--------|
+| CG Markets structure | 30 min | MySQL `market_coins` |
+| CMC metrics patch | 12 min | MySQL `market_coins` prices |
+| CG Trending | 1 hour | MySQL `trending_*` |
+| CG Exchanges | daily | MySQL `exchanges` |
+| CG Categories | daily | MySQL `categories` |
+| CG exchange details | daily (top 20) | ApiCache warmer |
+| CG top coins / OHLC / search | daily (small) | ApiCache warmer |
+
 The Markets page polls `/api/markets/prices` every 15s and flashes updated prices.
 
 | Table | Page |
@@ -75,13 +86,22 @@ The Markets page polls `/api/markets/prices` every 15s and flashes updated price
 
 If a table is empty, the corresponding page will call CoinGecko once (with a sync lock), then serve from MySQL.
 
-## Coin detail / search (ApiCache)
+## Coin / search / exchange detail (ApiCache + live-fill)
 
-These still use the legacy cache store:
+Secondary routes use ApiCache first. On a miss they **live-fetch CoinGecko once**, store the result, then render. Prewarm popular keys to save Demo credits:
 
 ```bash
-./venv/bin/python scripts/sync_coingecko.py --tasks top-coins,ohlc,search
+./venv/bin/python scripts/sync_coingecko.py --tasks top-coins,ohlc,search,exchange-details --limit 15
 ```
+
+List pages (Market / Exchanges / Trending / Categories) remain MySQL-only after first fill.
+
+### Secrets
+
+- Copy `.env.example` → `.env` (never commit `.env`).
+- Rotate any keys that were previously committed to git history.
+- Production: `FLASK_ENV=production`, `FLASK_DEBUG=false`, set `SECRET_KEY`.
+- Multi-worker: use Redis for `CACHE_TYPE` / `RATELIMIT_STORAGE_URI` (see `.env.example`).
 
 ## Run the app
 
@@ -101,8 +121,9 @@ Open [http://127.0.0.1:5000](http://127.0.0.1:5000).
 | `/exchanges` | MySQL `exchanges` |
 | `/trending` | MySQL `trending_snapshots` |
 | `/categories` | MySQL `categories` |
-| `/coin/<id>` | ApiCache (CoinGecko sync) |
-| `/search?q=` | ApiCache |
+| `/coin/<id>` | ApiCache + live-fill on miss |
+| `/search?q=` | ApiCache + live-fill on miss |
+| `/exchange/<id>` | ApiCache + live-fill on miss |
 | `/news` | CryptoPanic embed widgets |
 
 ## Celery (optional)

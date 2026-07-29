@@ -3,7 +3,7 @@
 {% block title %}Search Results{% endblock %}
 
 {% block content %}
-    {% with title="Search Results", meta='for "' ~ query ~ '"' %}
+    {% with title="Search Results", meta='for "' ~ query ~ '" · best-effort (cached / live-fill)' %}
         {% include "partials/page_header.html" %}
     {% endwith %}
 

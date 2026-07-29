@@ -96,6 +96,34 @@ def sync_exchanges(per_page=100, page=1) -> None:
     logger.info("Synced %s", cache_keys.exchanges_key(per_page, page))
 
 
+def sync_exchange_details(limit=20, per_page=100, page=1) -> None:
+    """Warm ApiCache for exchange detail pages (top N by trust rank)."""
+    from models import Exchange, db
+
+    ids: list[str] = []
+    rows = (
+        db.session.query(Exchange)
+        .order_by(Exchange.trust_score_rank.asc())
+        .limit(limit)
+        .all()
+    )
+    if rows:
+        ids = [row.exchange_id for row in rows if row.exchange_id]
+    else:
+        listing = cg_client.get_exchanges(per_page=min(limit, per_page), page=page) or []
+        ids = [row.get("id") for row in listing if isinstance(row, dict) and row.get("id")]
+        ids = ids[:limit]
+
+    for exchange_id in ids:
+        data = cg_client.get_exchange_details(exchange_id)
+        cache_store.set(
+            cache_keys.exchange_details_key(exchange_id),
+            data,
+            ttl_seconds=TTL_COLD,
+        )
+        logger.info("Synced %s", cache_keys.exchange_details_key(exchange_id))
+
+
 def sync_top_coin_details(limit=30, vs_currency="usd") -> None:
     markets = cg_client.get_market_data(vs_currency=vs_currency, limit=limit, page=1)
     for coin in markets:
@@ -134,6 +162,7 @@ TASKS = {
     "trending": sync_trending,
     "categories": sync_categories,
     "exchanges": sync_exchanges,
+    "exchange-details": sync_exchange_details,
     "top-coins": sync_top_coin_details,
     "ohlc": sync_ohlc,
     "search": sync_popular_searches,
@@ -145,7 +174,7 @@ def main() -> int:
     parser.add_argument(
         "--tasks",
         required=True,
-        help="Comma-separated tasks: markets,trending,categories,exchanges,top-coins,ohlc,search",
+        help="Comma-separated tasks: markets,trending,categories,exchanges,exchange-details,top-coins,ohlc,search",
     )
     parser.add_argument("--pages", type=int, default=1, help="Markets page count")
     parser.add_argument("--limit", type=int, default=250)
@@ -162,6 +191,12 @@ def main() -> int:
             logger.info("Running task: %s", name)
             if name == "markets":
                 sync_markets(limit=args.limit, pages=args.pages)
+            elif name == "top-coins":
+                sync_top_coin_details(limit=args.limit if args.limit != 250 else 30)
+            elif name == "ohlc":
+                sync_ohlc(limit=args.limit if args.limit != 250 else 20)
+            elif name == "exchange-details":
+                sync_exchange_details(limit=args.limit if args.limit != 250 else 20)
             else:
                 TASKS[name]()
 
