@@ -43,8 +43,9 @@
                                 </td>
 
                                 <!-- Market Cap -->
-                                <td class="align-middle">
-                                    ${{ cat.market_cap }}
+                                <td class="align-middle text-nowrap"
+                                    title="${{ '{:,.0f}'.format(cat.market_cap or 0) }}">
+                                    {{ (cat.market_cap or 0) | compact_usd }}
                                 </td>
 
                                 <!-- 24h Change -->
@@ -56,8 +57,9 @@
                                 </td>
 
                                 <!-- 24h Volume -->
-                                <td class="align-middle">
-                                    ${{ cat.volume_24h }}
+                                <td class="align-middle text-nowrap"
+                                    title="${{ '{:,.0f}'.format(cat.volume_24h or 0) }}">
+                                    {{ (cat.volume_24h or 0) | compact_usd }}
                                 </td>
 
                                 <!-- Top 3 Coins -->
