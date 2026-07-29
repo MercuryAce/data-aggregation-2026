@@ -1,4 +1,4 @@
-from flask import Blueprint, abort, jsonify, request
+from flask import Blueprint, abort, jsonify, request, render_template
 from flask_caching import Cache
 
 from handlers.guards import (
@@ -190,5 +190,9 @@ def init_cg_blueprint(cache: Cache, limiter=None):
             return {"exchange": exchange, "last_updated": fetched_at}
 
         return guarded_render("exchange.html", fetch_context)
+
+    @cg_bp.route("/news")
+    def news():
+        return render_template("news.html")
 
     return cg_bp
