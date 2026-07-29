@@ -10,17 +10,31 @@ from handlers.guards import (
 )
 from services.coingecko_service import (
     get_categories,
+    get_coin_details,
     get_exchange_details,
     get_exchanges,
     get_global,
+    get_market_data,
     get_ohlc,
     get_search,
     get_trending,
 )
-from services import market_service
-from services.timeseries_store import get_price_history
+from services import cache_keys, cache_store
 
 cg_bp = Blueprint("cg", __name__, url_prefix="")
+
+# Synced CoinGecko markets pages use this page size (see scripts/sync_coingecko.py).
+MARKETS_PAGE_SIZE = 250
+MAX_MARKET_PAGES = 10
+
+
+def _markets_total_pages(vs_currency="usd", limit=MARKETS_PAGE_SIZE) -> int:
+    total = 0
+    for page in range(1, MAX_MARKET_PAGES + 1):
+        if cache_store.get(cache_keys.markets_key(vs_currency, limit, page)) is None:
+            break
+        total = page
+    return max(total, 1)
 
 
 def init_cg_blueprint(cache: Cache, limiter=None):
@@ -30,27 +44,25 @@ def init_cg_blueprint(cache: Cache, limiter=None):
     def index():
         guard_request("index_last_hit", cooldown=5)
         page = request.args.get("page", default=1, type=int) or 1
-        per_page = request.args.get("per_page", default=100, type=int) or 100
-        per_page = min(max(per_page, 25), 250)
+        if page < 1:
+            page = 1
 
         def fetch_context():
-            coins, meta = market_service.get_unified_markets(
+            coins, coins_at = get_market_data(
+                vs_currency="usd",
+                limit=MARKETS_PAGE_SIZE,
                 page=page,
-                per_page=per_page,
-                max_pages=10,
             )
             global_payload, global_at = get_global()
-            last_updated = max(meta["last_updated"], global_at)
+            total_pages = _markets_total_pages()
             return {
                 "coins": coins,
                 "global_stats": global_payload["data"],
-                "last_updated": last_updated,
-                "last_updated_age": meta.get("last_updated_age"),
-                "price_source": meta.get("price_source"),
-                "page": meta.get("page", page),
-                "per_page": meta.get("per_page", per_page),
-                "total": meta.get("total", len(coins)),
-                "total_pages": meta.get("total_pages", 1),
+                "last_updated": max(coins_at, global_at),
+                "page": page,
+                "per_page": MARKETS_PAGE_SIZE,
+                "total": total_pages * MARKETS_PAGE_SIZE,
+                "total_pages": total_pages,
             }
 
         return guarded_render("index.html", fetch_context)
@@ -62,38 +74,13 @@ def init_cg_blueprint(cache: Cache, limiter=None):
         guard_request(f"coin_last_hit_{coin_id}", cooldown=3)
 
         def fetch_context():
-            coin_data, meta = market_service.get_unified_coin(coin_id)
+            coin_data, fetched_at = get_coin_details(coin_id)
             return {
                 "coin": coin_data,
-                "last_updated": meta["last_updated"],
-                "last_updated_age": meta.get("last_updated_age"),
-                "price_source": meta.get("price_source"),
+                "last_updated": fetched_at,
             }
 
         return guarded_render("coin.html", fetch_context)
-
-    @cg_bp.route("/api/live-prices")
-    @rate_limit(limiter, "30 per minute")
-    def live_prices():
-        raw = request.args.get("ids", "", type=str)
-        ids = [part.strip() for part in raw.split(",") if part.strip()]
-        if not ids:
-            return jsonify({"error": "ids query parameter required"}), 400
-        if len(ids) > 100:
-            return jsonify({"error": "Too many ids (max 100)"}), 400
-
-        guard_request("live_prices_last_hit", cooldown=1)
-
-        def fetch():
-            payload = market_service.get_live_prices(ids)
-            # JSON-serialize datetime
-            last_updated = payload.get("last_updated")
-            if last_updated is not None:
-                payload = dict(payload)
-                payload["last_updated"] = last_updated.isoformat()
-            return payload
-
-        return guarded_json(fetch)
 
     @cg_bp.route("/api/price-history/<coin_id>")
     @cache.cached(timeout=300, query_string=True, response_filter=only_cache_success)
@@ -107,22 +94,6 @@ def init_cg_blueprint(cache: Cache, limiter=None):
         guard_request(f"price_history_last_hit_{coin_id}_{days}", cooldown=3)
 
         def fetch():
-            # Prefer Mongo ticks when available; fall back to CG OHLC cache
-            from datetime import datetime, timedelta, timezone
-
-            since = datetime.now(timezone.utc) - timedelta(days=days)
-            ticks = get_price_history(coin_id, since=since, limit=2000)
-            if len(ticks) >= 2:
-                # OHLC-compatible: [ts_ms, open, high, low, close] approx from ticks
-                series = []
-                for tick in ticks:
-                    ts = tick.get("timestamp")
-                    price = tick.get("price")
-                    if ts is None or price is None:
-                        continue
-                    ts_ms = int(ts.timestamp() * 1000) if hasattr(ts, "timestamp") else ts
-                    series.append([ts_ms, price, price, price, price])
-                return series
             return get_ohlc(coin_id, days=days)[0]
 
         return guarded_json(fetch)

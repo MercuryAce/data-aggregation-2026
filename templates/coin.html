@@ -39,13 +39,9 @@
                         <span class="fs-5 fw-bold text-danger">{{ "%.0f"|format(coin.get('sentiment_votes_down_percentage', 0) or 0) }}%</span>
                     </div>
                 </div>
-                {% if last_updated_age or price_source %}
+                {% if last_updated %}
                 <small class="text-muted d-block mt-2">
-                    {% if last_updated_age %}Updated {{ last_updated_age }}{% endif %}
-                    {% if price_source %} · {{ price_source|upper }}{% endif %}
-                    {% if coin.get('mashup', {}).get('tvl') is not none %}
-                     · TVL {{ coin.mashup.tvl | compact_usd }}
-                    {% endif %}
+                    Updated {{ last_updated }}
                 </small>
                 {% endif %}
             </div>
