@@ -9,63 +9,20 @@ from handlers.guards import (
     rate_limit,
 )
 from services.coingecko_service import (
-    get_categories,
     get_coin_details,
     get_exchange_details,
-    get_exchanges,
-    get_global,
-    get_market_data,
     get_ohlc,
     get_search,
-    get_trending,
 )
-from services import cache_keys, cache_store
 
 cg_bp = Blueprint("cg", __name__, url_prefix="")
 
-# Synced CoinGecko markets pages use this page size (see scripts/sync_coingecko.py).
-MARKETS_PAGE_SIZE = 250
-MAX_MARKET_PAGES = 10
-
-
-def _markets_total_pages(vs_currency="usd", limit=MARKETS_PAGE_SIZE) -> int:
-    total = 0
-    for page in range(1, MAX_MARKET_PAGES + 1):
-        if cache_store.get(cache_keys.markets_key(vs_currency, limit, page)) is None:
-            break
-        total = page
-    return max(total, 1)
-
 
 def init_cg_blueprint(cache: Cache, limiter=None):
-    @cg_bp.route("/")
-    @cache.cached(timeout=30, query_string=True, response_filter=only_cache_success)
-    @rate_limit(limiter, "5 per minute")
-    def index():
-        guard_request("index_last_hit", cooldown=5)
-        page = request.args.get("page", default=1, type=int) or 1
-        if page < 1:
-            page = 1
+    """Secondary CG routes (coin detail, search, news, exchange detail, OHLC).
 
-        def fetch_context():
-            coins, coins_at = get_market_data(
-                vs_currency="usd",
-                limit=MARKETS_PAGE_SIZE,
-                page=page,
-            )
-            global_payload, global_at = get_global()
-            total_pages = _markets_total_pages()
-            return {
-                "coins": coins,
-                "global_stats": global_payload["data"],
-                "last_updated": max(coins_at, global_at),
-                "page": page,
-                "per_page": MARKETS_PAGE_SIZE,
-                "total": total_pages * MARKETS_PAGE_SIZE,
-                "total_pages": total_pages,
-            }
-
-        return guarded_render("index.html", fetch_context)
+    Market / Exchanges / Trending / Categories live on the views blueprint.
+    """
 
     @cg_bp.route("/coin/<coin_id>")
     @cache.cached(timeout=30, response_filter=only_cache_success)
@@ -98,30 +55,6 @@ def init_cg_blueprint(cache: Cache, limiter=None):
 
         return guarded_json(fetch)
 
-    @cg_bp.route("/trending")
-    @cache.cached(timeout=120, response_filter=only_cache_success)
-    @rate_limit(limiter, "5 per minute")
-    def trending():
-        guard_request("trending_last_hit", cooldown=5)
-
-        def fetch_context():
-            trending_data, fetched_at = get_trending()
-            return {"trending": trending_data, "last_updated": fetched_at}
-
-        return guarded_render("trending.html", fetch_context)
-
-    @cg_bp.route("/categories")
-    @cache.cached(timeout=120, response_filter=only_cache_success)
-    @rate_limit(limiter, "5 per minute")
-    def categories():
-        guard_request("categories_last_hit", cooldown=5)
-
-        def fetch_context():
-            categories_data, fetched_at = get_categories()
-            return {"categories": categories_data, "last_updated": fetched_at}
-
-        return guarded_render("categories.html", fetch_context)
-
     @cg_bp.route("/search")
     @cache.cached(timeout=60, query_string=True, response_filter=only_cache_success)
     @rate_limit(limiter, "5 per minute")
@@ -137,18 +70,6 @@ def init_cg_blueprint(cache: Cache, limiter=None):
             return {"query": query, "results": results, "last_updated": fetched_at}
 
         return guarded_render("search.html", fetch_context)
-
-    @cg_bp.route("/exchanges")
-    @cache.cached(timeout=120, response_filter=only_cache_success)
-    @rate_limit(limiter, "5 per minute")
-    def exchanges():
-        guard_request("exchanges_last_hit", cooldown=5)
-
-        def fetch_context():
-            exchanges_data, fetched_at = get_exchanges()
-            return {"exchanges": exchanges_data, "last_updated": fetched_at}
-
-        return guarded_render("exchanges.html", fetch_context)
 
     @cg_bp.route("/exchange/<exchange_id>")
     @cache.cached(timeout=120, response_filter=only_cache_success)

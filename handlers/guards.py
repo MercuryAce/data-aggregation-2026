@@ -7,15 +7,34 @@ from werkzeug.exceptions import HTTPException
 
 from services.cache_store import CacheMissError
 
-# Cached pages no longer hit live APIs; keep guards off by default.
-# Set REQUEST_GUARD_COOLDOWN=5 to restore click-spam protection.
+# Cached / DB pages: session click-spam off by default.
+# Set REQUEST_GUARD_COOLDOWN=5 to restore per-route cooldowns.
 _DEFAULT_GUARD_COOLDOWN = int(os.getenv("REQUEST_GUARD_COOLDOWN", "0"))
+# Legacy/CG-path pages (may still hit ApiCache / upstream-shaped workloads)
 _PAGE_RATE_LIMIT = os.getenv("PAGE_RATE_LIMIT", "60 per minute")
+# MySQL-backed views — protect the app/DB only, not CoinGecko quotas
+_VIEWS_RATE_LIMIT = os.getenv("VIEWS_RATE_LIMIT", "120 per minute")
 
 
-def rate_limit(limiter, limit_str):
-    """Apply flask-limiter; PAGE_RATE_LIMIT env overrides per-route strings."""
-    effective = _PAGE_RATE_LIMIT or limit_str
+def rate_limit(limiter, limit_str, *, kind: str = "page"):
+    """Apply flask-limiter.
+
+    ``kind="page"`` uses ``PAGE_RATE_LIMIT`` (CG / ApiCache routes).
+    ``kind="views"`` uses ``VIEWS_RATE_LIMIT`` (MySQL-backed list pages).
+    Explicit env values always win; otherwise the per-route ``limit_str`` is used.
+    """
+    if kind == "views":
+        env_val = os.getenv("VIEWS_RATE_LIMIT")
+        default_env = _VIEWS_RATE_LIMIT
+    else:
+        env_val = os.getenv("PAGE_RATE_LIMIT")
+        default_env = _PAGE_RATE_LIMIT
+
+    # Prefer explicit env when set; else fall back to decorator argument.
+    if env_val is not None and env_val.strip():
+        effective = env_val.strip()
+    else:
+        effective = limit_str or default_env
 
     def decorator(f):
         if not limiter:

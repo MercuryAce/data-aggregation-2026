@@ -6,6 +6,7 @@ from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from blueprints.coingecko import init_cg_blueprint
+from blueprints.views import init_views_blueprint
 from models import db
 import markdown
 
@@ -90,6 +91,9 @@ def compact_number_filter(value, decimals=1):
 def compact_usd_filter(value, decimals=1):
     return compact_usd(value, decimals)
 
+
+views_bp = init_views_blueprint(cache, limiter)
+app.register_blueprint(views_bp)
 
 cg_bp = init_cg_blueprint(cache, limiter)
 app.register_blueprint(cg_bp)
