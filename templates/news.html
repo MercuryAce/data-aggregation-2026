@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Live Crypto Prices{% endblock %}
+
+{% block content %}
+    {% with title="News feeds", subtitle="Aggregated news feeds from CryptoPAnic" %}
+        {% include "partials/page_header.html" %}
+    {% endwith %}
+
+    {% if error %}
+        <div class="alert alert-warning" role="alert">
+            {{ error }}
+        </div>
+    {% endif %}
+    <div class="card shadow-sm" id="newsFeed">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-12">
+                    <iframe width="100%" scrolling="yes" allowtransparency="true" frameborder="0" src="https://cryptopanic.com/widgets/news/?bg_color=161B22&amp;font_family=sans&amp;header_bg_color=30343B&amp;header_text_color=8B949E&amp;link_color=0091C2&amp;news_feed=recent&amp;posts_limit=10&amp;text_color=E6EDF3&amp;title=Latest%20News" height="585px"></iframe>
+                </div>
+                <div class="col-md-12">
+                    <iframe width="100%" scrolling="yes" allowtransparency="true" frameborder="0" src="https://cryptopanic.com/widgets/news/?bg_color=161B22&amp;font_family=sans&amp;header_bg_color=30343B&amp;header_text_color=8B949E&amp;link_color=0091C2&amp;news_feed=trending&amp;posts_limit=10&amp;text_color=E6EDF3&amp;title=Trending%20News" height="585px"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://static.cryptopanic.com/static/js/widgets.min.js"></script>
+<script>
+    const newsFeed = document.querySelector('.CryptoPanicWidget');
+    newsFeed.addEventListener('click', () => {
+        window.open('https://cryptopanic.com/', '_blank');
+    });
+</script>
+{% endblock %}
