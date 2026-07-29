@@ -11,8 +11,9 @@ sync scripts / Celery beat  →  HTTP clients  →  services/cache_store.py  →
 Flask routes                →  *_service / market_service               →  templates
 ```
 
-- **SQLite `ApiCache`** (`models.py`, file at `DATABASE_URI` / `instance/cache.db`) — current
-  snapshots (markets, coin details, FX, news, etc.). Shared by Flask, Celery, and sync CLIs.
+- **MySQL `ApiCache`** (`models.py`, via `DATABASE_URI`) — current snapshots (markets, coin
+  details, FX, news, etc.). Shared by Flask, Celery, and sync CLIs. Default local DB:
+  `cryptodash` on `127.0.0.1:3306`. SQLite remains a fallback if `DATABASE_URI` is unset.
 - **MongoDB Atlas** (`services/timeseries_store.py`) — optional price ticks only; no-op if
   `MONGODB_URI` is unset or unreachable. Auth via X.509 cert (`MONGODB_TLS_CERT_FILE`).
 - **flask-caching** / **flask-limiter** — still in-process memory by default (`CACHE_TYPE`,
@@ -68,13 +69,13 @@ with app.app_context(): build_id_map()"
 ```
 
 ### Non-obvious gotchas
-- **`DATABASE_URI`** must be an absolute `sqlite:////…/instance/cache.db` path (pinned in `.env`)
-  so Flask, Celery, and sync scripts share one file. `instance/` is gitignored.
-- SQLite uses **WAL** (`PRAGMA journal_mode=WAL`) for concurrent writers. Do not delete
-  `instance/cache.db` (or `-wal`/`-shm` sidecars) while the app is running.
-- **Pytest must not wipe prod DB**: `tests/conftest.py` calls `rebind_db()` before
-  `db.drop_all()`. Never call `drop_all()` after only changing `SQLALCHEMY_DATABASE_URI` —
-  Flask-SQLAlchemy keeps the old engine until rebound.
+- **`DATABASE_URI`** should point at MySQL, e.g.
+  `mysql+pymysql://user:URL_ENCODED_PASSWORD@127.0.0.1:3306/cryptodash`.
+  Special characters in the password must be URL-encoded (`/` → `%2F`, `+` → `%2B`).
+  Driver: `PyMySQL`. Flask/Celery/sync all share this URI.
+- **Pytest** still uses an isolated temp **SQLite** file via `rebind_db()` — never call
+  `drop_all()` after only changing `SQLALCHEMY_DATABASE_URI` without rebinding, or you can
+  wipe the wrong database.
 - `SECRET_KEY` is required for sessions (`allow_request` anti–click-spam). Falls back to
   `DEV_SECRET_KEY` in non-production. Both are in `.env`.
 - Rate-limit env values must be full flask-limiter strings (`"2000 per day"`, not `"2000"`).

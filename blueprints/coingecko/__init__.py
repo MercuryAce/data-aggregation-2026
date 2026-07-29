@@ -30,8 +30,8 @@ def init_cg_blueprint(cache: Cache, limiter=None):
     def index():
         guard_request("index_last_hit", cooldown=5)
         page = request.args.get("page", default=1, type=int) or 1
-        per_page = request.args.get("per_page", default=250, type=int) or 250
-        per_page = min(max(per_page, 50), 250)
+        per_page = request.args.get("per_page", default=100, type=int) or 100
+        per_page = min(max(per_page, 25), 250)
 
         def fetch_context():
             coins, meta = market_service.get_unified_markets(

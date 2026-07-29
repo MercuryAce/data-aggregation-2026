@@ -49,10 +49,10 @@ def register_error_handlers(app):
         return render_template(
             "errors/5xx.html",
             code=503,
-            title="Data not ready yet",
+            title="Service temporarily unavailable",
             message=(
-                "Market data has not been synced into the local cache. "
-                "Run: python scripts/sync_coingecko.py --tasks markets"
+                "This data is not available right now. "
+                "Please try again shortly."
             ),
             error=error,
         ), 503

@@ -6,3 +6,4 @@ instance/
 *.db
 certificates/
 *.pem
+.env

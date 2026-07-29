@@ -6,6 +6,7 @@ urllib3
 python-dotenv~=1.1.0
 markdown~=3.10.2
 flask-sqlalchemy~=3.1.1
+PyMySQL~=1.1
 celery~=5.4
 redis~=5.0
 pymongo[srv]~=4.10

@@ -44,23 +44,26 @@ limiter = Limiter(
 )
 
 # === Database Configuration ===
-# Pin via DATABASE_URI in .env so Flask, Celery, and sync scripts share one file.
+# DATABASE_URI in .env (MySQL preferred; sqlite fallback for local/dev only).
 os.makedirs(app.instance_path, exist_ok=True)
 default_db_path = os.path.join(app.instance_path, "cache.db")
 database_uri = os.environ.get("DATABASE_URI") or f"sqlite:///{default_db_path}"
 app.config["SQLALCHEMY_DATABASE_URI"] = database_uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 if database_uri.startswith("sqlite"):
-    # Allow Flask + Celery + sync CLI to share the same file DB.
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
         "connect_args": {"check_same_thread": False},
+    }
+elif database_uri.startswith("mysql"):
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_pre_ping": True,
+        "pool_recycle": 28000,
     }
 
 db.init_app(app)
 with app.app_context():
     db.create_all()
     if database_uri.startswith("sqlite"):
-        # WAL survives process restarts and is safer under concurrent writers.
         db.session.execute(text("PRAGMA journal_mode=WAL"))
         db.session.execute(text("PRAGMA synchronous=NORMAL"))
         db.session.commit()

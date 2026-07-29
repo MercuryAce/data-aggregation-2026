@@ -197,6 +197,15 @@ def get_unified_markets(
             symbol = (cg.get("symbol") or "").upper()
             ordered.append(_mash_row(cg, cmc_by_symbol.get(symbol), mapped))
 
+    # Stable market-cap rank order (None ranks last)
+    ordered.sort(
+        key=lambda row: (
+            row.get("market_cap_rank") is None,
+            row.get("market_cap_rank") if row.get("market_cap_rank") is not None else 10**9,
+            -(row.get("market_cap") or 0),
+        )
+    )
+
     total = len(ordered)
     start = (page - 1) * per_page
     end = start + per_page
