@@ -6,6 +6,7 @@
 #   scripts/run_cron.sh sync-platforms
 #   scripts/run_cron.sh patch-cmc
 #   scripts/run_cron.sh patch-defillama
+#   scripts/run_cron.sh patch-quotes
 #   scripts/run_cron.sh trending
 #   scripts/run_cron.sh exchanges-categories
 #   scripts/run_cron.sh warm-apicache
@@ -27,7 +28,7 @@ fi
 
 JOB="${1:-}"
 if [[ -z "$JOB" ]]; then
-  echo "Usage: $0 <markets|sync-platforms|patch-cmc|patch-defillama|trending|exchanges-categories|warm-apicache>" >&2
+  echo "Usage: $0 <markets|sync-platforms|patch-cmc|patch-defillama|patch-quotes|trending|exchanges-categories|warm-apicache>" >&2
   exit 1
 fi
 
@@ -75,6 +76,10 @@ case "$JOB" in
   patch-defillama)
     run_locked "patch-defillama" \
       "$PYTHON" scripts/populate_views.py --patch-defillama
+    ;;
+  patch-quotes)
+    run_locked "patch-quotes" \
+      "$PYTHON" scripts/populate_views.py --patch-oracle-quotes --patch-venue-quotes --quotes-limit 20
     ;;
   trending)
     run_locked "trending" \

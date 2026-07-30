@@ -32,6 +32,26 @@ class Config:
     )
     ALPHAVANTAGE_REQUEST_TIMEOUT = int(os.getenv("ALPHAVANTAGE_REQUEST_TIMEOUT", "15"))
 
+    # Spot venue prototypes (public bookTicker/Ticker; keys reserved for signed routes)
+    BINANCE_API_KEY = os.getenv("BINANCE_API_KEY")
+    BINANCE_API_SECRET_KEY = os.getenv("BINANCE_API_SECRET_KEY")
+    # Spot REST expects X-MBX-APIKEY for signed calls; public book data works without it.
+    BINANCE_API_KEY_HEADER = os.getenv("BINANCE_API_KEY_HEADER", "X-MBX-APIKEY")
+    BINANCE_BASE_URL = os.getenv("BINANCE_BASE_URL", "https://api.binance.com")
+    BINANCE_REQUEST_TIMEOUT = int(os.getenv("BINANCE_REQUEST_TIMEOUT", "15"))
+
+    KRAKEN_API_KEY = os.getenv("KRAKEN_API_KEY")
+    KRAKEN_API_SECRET_KEY = os.getenv("KRAKEN_API_SECRET_KEY")
+    KRAKEN_API_KEY_HEADER = os.getenv("KRAKEN_API_KEY_HEADER", "API-Key")
+    KRAKEN_BASE_URL = os.getenv("KRAKEN_BASE_URL", "https://api.kraken.com")
+    KRAKEN_REQUEST_TIMEOUT = int(os.getenv("KRAKEN_REQUEST_TIMEOUT", "15"))
+
+    OKX_API_KEY = os.getenv("OKX_API_KEY")
+    OKX_API_SECRET_KEY = os.getenv("OKX_API_SECRET_KEY")
+    OKX_API_PASSPHRASE = os.getenv("OKX_API_PASSPHRASE")
+    OKX_BASE_URL = os.getenv("OKX_BASE_URL", "https://www.okx.com")
+    OKX_REQUEST_TIMEOUT = int(os.getenv("OKX_REQUEST_TIMEOUT", "15"))
+
     MONGODB_URI = os.getenv("MONGODB_URI", "")
     MONGODB_DB = os.getenv("MONGODB_DB", "cryptodash")
     # X.509 client cert for Atlas (absolute or project-relative path)

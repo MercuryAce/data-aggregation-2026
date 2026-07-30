@@ -16,6 +16,7 @@
     --accent-hover:  #6cb1ff;
     --green:         #3fb950;
     --red:           #f85149;
+    --orange:        #f59e0b;
     --radius:        12px;
     --radius-sm:     8px;
     --shadow:        0 1px 3px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.18);
@@ -60,6 +61,15 @@ h6 { font-size: 0.85rem; }
 
 .text-muted { color: var(--text-muted) !important; }
 small, .small { font-size: 0.82rem; }
+.text-orange { color: var(--orange) !important; }
+.text-red { color: var(--red) !important; }
+.text-green { color: var(--green) !important; }
+.text-blue { color: var(--blue) !important; }
+.text-purple { color: var(--purple) !important; }
+.text-pink { color: var(--pink) !important; }
+.text-brown { color: var(--brown) !important; }
+.text-gray { color: var(--gray) !important; }
+.text-black { color: var(--black) !important; }
 
 /* ---------- Shared page header component ---------- */
 .page-header {

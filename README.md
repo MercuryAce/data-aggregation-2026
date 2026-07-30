@@ -154,6 +154,7 @@ Wrapper: [`scripts/run_cron.sh`](scripts/run_cron.sh) (logging + `flock` so jobs
 | `run_cron.sh markets` | every 30 min |
 | `run_cron.sh sync-platforms` | daily |
 | `run_cron.sh patch-defillama` | every **60 s** (price pulse) |
+| `run_cron.sh patch-quotes` | every **2 min** (oracle + venue bid/ask) |
 | `run_cron.sh patch-cmc` | every 12 min |
 | `run_cron.sh trending` | hourly |
 | `run_cron.sh exchanges-categories` | daily |

@@ -234,3 +234,39 @@ class SyncLock(db.Model):
     locked_at = db.Column(db.DateTime)
     status = db.Column(db.String(20), nullable=False, default="idle")
     message = db.Column(db.String(500))
+
+
+class AssetQuote(db.Model):
+    """Latest oracle mid or venue bid/ask for an asset (no arb signaling)."""
+
+    __tablename__ = "asset_quotes"
+
+    cg_id = db.Column(db.String(200), primary_key=True)
+    venue = db.Column(db.String(50), primary_key=True)
+    kind = db.Column(db.String(20), nullable=False, default="oracle")  # oracle|exchange
+    pair = db.Column(db.String(64))
+    bid = db.Column(db.Float)
+    ask = db.Column(db.Float)
+    last = db.Column(db.Float)
+    meta = db.Column(db.JSON)
+    synced_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
+
+    def to_dict(self) -> dict:
+        mid = self.last
+        if mid is None and self.bid is not None and self.ask is not None:
+            mid = (self.bid + self.ask) / 2.0
+        spread = None
+        if self.bid is not None and self.ask is not None:
+            spread = self.ask - self.bid
+        return {
+            "cg_id": self.cg_id,
+            "venue": self.venue,
+            "kind": self.kind,
+            "pair": self.pair,
+            "bid": self.bid,
+            "ask": self.ask,
+            "last": self.last,
+            "mid": mid,
+            "spread": spread,
+            "synced_at": self.synced_at.isoformat() if self.synced_at else None,
+        }

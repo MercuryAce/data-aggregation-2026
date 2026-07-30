@@ -22,9 +22,11 @@ CRYPTODASH_ROOT=/var/www/html/cryptodash
 # Live price pulse (DefiLlama) every minute — price only
 * * * * * $CRYPTODASH_ROOT/scripts/run_cron.sh patch-defillama
 
+# Oracle + venue bid/ask quotes (source spread / spot display) every 2 minutes
+*/2 * * * * $CRYPTODASH_ROOT/scripts/run_cron.sh patch-quotes
+
 # Richer metrics patch (CMC) every 12 minutes — mcap / volume / %
 */12 * * * * $CRYPTODASH_ROOT/scripts/run_cron.sh patch-cmc
-
 # Trending every hour at :05
 5 * * * * $CRYPTODASH_ROOT/scripts/run_cron.sh trending
 

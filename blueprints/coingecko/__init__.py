@@ -32,9 +32,17 @@ def init_cg_blueprint(cache: Cache, limiter=None):
 
         def fetch_context():
             coin_data, fetched_at = get_coin_details(coin_id)
+            quotes = None
+            try:
+                from services.populate_quotes import quotes_for_coin
+
+                quotes = quotes_for_coin(coin_id)
+            except Exception:
+                quotes = None
             return {
                 "coin": coin_data,
                 "last_updated": fetched_at,
+                "quotes": quotes,
             }
 
         return guarded_render("coin.html", fetch_context)

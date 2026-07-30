@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 
 from app import app
 from services import populate_cmc, populate_coingecko as populate
-from services import populate_defillama, populate_platforms
+from services import populate_defillama, populate_platforms, populate_quotes
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -63,6 +63,22 @@ def main() -> int:
         default=None,
         help="Cap DefiLlama patch to top N by market_cap_rank (default: all)",
     )
+    parser.add_argument(
+        "--patch-oracle-quotes",
+        action="store_true",
+        help="Upsert oracle mids (CG/CMC/DefiLlama/AV) into asset_quotes",
+    )
+    parser.add_argument(
+        "--patch-venue-quotes",
+        action="store_true",
+        help="Upsert exchange bid/ask (Binance/Kraken/OKX) into asset_quotes",
+    )
+    parser.add_argument(
+        "--quotes-limit",
+        type=int,
+        default=20,
+        help="Top N by market_cap_rank for quote patches (default: 20)",
+    )
     args = parser.parse_args()
 
     if (
@@ -70,10 +86,13 @@ def main() -> int:
         and not args.patch_cmc
         and not args.patch_defillama
         and not args.sync_platforms
+        and not args.patch_oracle_quotes
+        and not args.patch_venue_quotes
     ):
         parser.error(
             "Provide --tables and/or --sync-platforms and/or --patch-cmc "
-            "and/or --patch-defillama"
+            "and/or --patch-defillama and/or --patch-oracle-quotes "
+            "and/or --patch-venue-quotes"
         )
 
     with app.app_context():
@@ -98,6 +117,14 @@ def main() -> int:
         if args.patch_defillama:
             n = populate_defillama.patch_market_prices(limit=args.defillama_limit)
             logger.info("DefiLlama price patch updated %s rows", n)
+
+        if args.patch_oracle_quotes:
+            n = populate_quotes.patch_oracle_quotes(limit=args.quotes_limit)
+            logger.info("Oracle quotes upsert writes ~%s", n)
+
+        if args.patch_venue_quotes:
+            n = populate_quotes.patch_venue_quotes(limit=args.quotes_limit)
+            logger.info("Venue quotes upsert writes ~%s", n)
     return 0
 
 
