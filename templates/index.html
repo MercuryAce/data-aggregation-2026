@@ -116,12 +116,13 @@
                             </div>
                         </td>
                         <td class="text-end text-nowrap">
-                            <span class="js-price price-cell small"
-                                  data-price="{{ coin.get('current_price') if coin.get('current_price') is not none else '' }}">
+                            <span class="js-price price-cell"
+                                  data-price="{{ coin.get('current_price') if coin.get('current_price') is not none else '' }}"
+                                  data-synced="{{ coin.get('synced_at') or '' }}">
                                 {% if coin.get('current_price') is not none %}
-                                    ${{ "{:,.8f}".format(coin['current_price']) }}
+                                <strong class="js-price-text">${{ "{:,.2f}".format(coin['current_price']) if coin['current_price']|abs >= 1 else ("{:,.4f}".format(coin['current_price']) if coin['current_price']|abs >= 0.01 else "{:.8f}".format(coin['current_price']).rstrip('0').rstrip('.')) }}</strong>
                                 {% else %}
-                                    <span class="text-muted">—</span>
+                                <span class="text-muted">—</span>
                                 {% endif %}
                             </span>
                         </td>
@@ -215,7 +216,7 @@
     const scrollWrap = document.getElementById('marketTableWrap');
     const scrollArea = document.getElementById('marketTableScroll');
     const freshnessLabel = document.getElementById('freshnessLabel');
-    const POLL_MS = 15000;
+    const POLL_MS = 5000;
     const pageNum = {{ page | default(1) }};
 
     searchInput.addEventListener('input', function () {
@@ -264,19 +265,21 @@
         return `$${sign}${Math.round(n)}`;
     }
 
-    function flashPrice(el, html) {
-        el.classList.remove('is-pop');
+    function flashPrice(el, html, soft) {
+        el.classList.remove('is-pop', 'is-tick', 'is-out');
         el.classList.add('is-out');
         window.setTimeout(() => {
             el.innerHTML = html;
             el.classList.remove('is-out');
-            el.classList.add('is-pop');
+            el.classList.add(soft ? 'is-tick' : 'is-pop');
             const done = () => {
-                el.classList.remove('is-pop');
+                el.classList.remove('is-pop', 'is-tick');
                 el.removeEventListener('animationend', done);
             };
             el.addEventListener('animationend', done);
-        }, 140);
+            // Fallback if animationend does not fire
+            window.setTimeout(done, 700);
+        }, 120);
     }
 
     function applyPrices(payload) {
@@ -291,21 +294,28 @@
             const volEl = row.querySelector('.js-volume');
 
             if (priceEl) {
-                const prev = priceEl.dataset.price;
-                const next = data.price == null ? '' : String(data.price);
-                const changed = prev === '' || next === ''
-                    ? prev !== next
-                    : Number(prev) !== Number(next);
-                if (changed) {
-                    priceEl.dataset.price = next;
+                const prevPrice = priceEl.dataset.price;
+                const nextPrice = data.price == null ? '' : String(data.price);
+                const prevSynced = priceEl.dataset.synced || '';
+                const nextSynced = data.synced_at || '';
+                const priceChanged = prevPrice === '' || nextPrice === ''
+                    ? prevPrice !== nextPrice
+                    : Number(prevPrice) !== Number(nextPrice);
+                const syncedChanged = Boolean(nextSynced) && nextSynced !== prevSynced;
+
+                if (priceChanged || syncedChanged) {
+                    priceEl.dataset.price = nextPrice;
+                    priceEl.dataset.synced = nextSynced;
                     const html = data.price_display
-                        ? `${data.price_display}`
+                        ? `<strong class="js-price-text">${data.price_display}</strong>`
                         : '<span class="text-muted">—</span>';
-                    // Skip flash on first successful hydrate when values match display already
-                    if (prev === '') {
+                    if (prevPrice === '' && !priceChanged) {
                         priceEl.innerHTML = html;
+                    } else if (priceChanged) {
+                        flashPrice(priceEl, html, false);
                     } else {
-                        flashPrice(priceEl, html);
+                        // Same price but fresh sync — soft pulse so UX shows activity
+                        flashPrice(priceEl, html, true);
                     }
                 }
             }
@@ -341,11 +351,15 @@
         try {
             const res = await fetch(`/api/markets/prices?page=${pageNum}`, {
                 headers: { Accept: 'application/json' },
+                cache: 'no-store',
             });
-            if (!res.ok) return;
+            if (!res.ok) {
+                console.warn('markets prices poll failed', res.status);
+                return;
+            }
             applyPrices(await res.json());
-        } catch (_) {
-            /* ignore transient poll errors */
+        } catch (err) {
+            console.warn('markets prices poll error', err);
         }
     }
 

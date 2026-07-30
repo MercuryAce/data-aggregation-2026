@@ -137,7 +137,10 @@ def init_views_blueprint(cache: Cache, limiter=None):
                 "prices": prices,
                 "updated_at": latest.isoformat() if latest else None,
             }
-        )
+        ), 200, {
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+        }
 
     @views_bp.route("/exchanges")
     @cache.cached(timeout=120, response_filter=only_cache_success)

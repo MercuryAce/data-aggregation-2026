@@ -17,6 +17,7 @@ from models import (
     TrendingSnapshot,
     db,
 )
+from services.asset_identity import merge_external_ids
 from services.cache_store import CacheMissError
 
 logger = logging.getLogger(__name__)
@@ -100,6 +101,8 @@ def populate_markets(*, pages: int = MARKETS_PAGES, per_page: int = MARKETS_PER_
         coin.fully_diluted_valuation = row.get("fully_diluted_valuation")
         coin.total_supply = row.get("total_supply")
         coin.circulating_supply = row.get("circulating_supply")
+        coin.external_ids = merge_external_ids(coin.external_ids, coingecko=cg_id)
+        coin.structure_synced_at = now
         coin.synced_at = now
         coin.source = SOURCE
         db.session.merge(coin)

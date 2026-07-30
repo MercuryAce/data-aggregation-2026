@@ -84,6 +84,13 @@ class MarketCoin(db.Model):
     fully_diluted_valuation = db.Column(db.Float)
     total_supply = db.Column(db.Float)
     circulating_supply = db.Column(db.Float)
+    # Generic cross-provider identity (not named for a single oracle)
+    platforms = db.Column(db.JSON)  # {chain: contract_address}
+    primary_chain = db.Column(db.String(64))
+    contract_address = db.Column(db.String(128), index=True)
+    external_ids = db.Column(db.JSON)  # {"coingecko": "...", "cmc": 1, "cmc_slug": "..."}
+    structure_synced_at = db.Column(db.DateTime)  # last rank/metadata refresh
+    metrics_synced_at = db.Column(db.DateTime)  # last live price/metrics patch
     synced_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
     source = db.Column(db.String(50), nullable=False, default="coingecko")
 
@@ -103,6 +110,15 @@ class MarketCoin(db.Model):
             "fully_diluted_valuation": self.fully_diluted_valuation,
             "total_supply": self.total_supply,
             "circulating_supply": self.circulating_supply,
+            "platforms": self.platforms or {},
+            "primary_chain": self.primary_chain,
+            "contract_address": self.contract_address,
+            "external_ids": self.external_ids or {},
+            "synced_at": self.synced_at.isoformat() if self.synced_at else None,
+            "metrics_synced_at": (
+                self.metrics_synced_at.isoformat() if self.metrics_synced_at else None
+            ),
+            "source": self.source,
         }
 
 

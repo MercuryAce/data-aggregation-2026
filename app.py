@@ -64,6 +64,9 @@ elif database_uri.startswith("mysql"):
 db.init_app(app)
 with app.app_context():
     db.create_all()
+    from services.schema import ensure_market_coin_identity_columns
+
+    ensure_market_coin_identity_columns()
     if database_uri.startswith("sqlite"):
         db.session.execute(text("PRAGMA journal_mode=WAL"))
         db.session.execute(text("PRAGMA synchronous=NORMAL"))

@@ -371,6 +371,9 @@ footer.site-footer a { color: var(--accent); }
 .price-cell.is-pop {
     animation: price-pop 0.55s ease;
 }
+.price-cell.is-tick {
+    animation: price-tick 0.45s ease;
+}
 @keyframes price-pop {
     0% {
         opacity: 0;
@@ -386,6 +389,20 @@ footer.site-footer a { color: var(--accent); }
     100% {
         opacity: 1;
         transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(88, 166, 255, 0);
+    }
+}
+@keyframes price-tick {
+    0% {
+        opacity: 0.35;
+        box-shadow: 0 0 0 0 rgba(88, 166, 255, 0);
+    }
+    40% {
+        opacity: 1;
+        box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.28);
+    }
+    100% {
+        opacity: 1;
         box-shadow: 0 0 0 0 rgba(88, 166, 255, 0);
     }
 }

@@ -30,17 +30,20 @@ cg blueprint (remaining) --> ApiCache / CG for coin detail, search, news, exchan
 
 | Table | Populated by | Served by |
 |-------|--------------|-----------|
-| `market_coins` + `global_stats` | `ensure_markets` / Celery 30m + CMC 12m | `/` |
-| `exchanges` | `ensure_exchanges` / Celery daily | `/exchanges` |
-| `trending_snapshots` (+ `trending_coins`) | `ensure_trending` / Celery hourly | `/trending` |
-| `categories` | `ensure_categories` / Celery daily | `/categories` |
+| `market_coins` + `global_stats` | `ensure_markets` / **cron** 30m + platforms daily + DefiLlama 60s + CMC 12m | `/` |
+| `exchanges` | `ensure_exchanges` / **cron** daily | `/exchanges` |
+| `trending_snapshots` (+ `trending_coins`) | `ensure_trending` / **cron** hourly | `/trending` |
+| `categories` | `ensure_categories` / **cron** daily | `/categories` |
+
+Production refresh: [`deploy/crontab.example`](deploy/crontab.example) + [`scripts/run_cron.sh`](scripts/run_cron.sh).
+Celery Beat/worker is legacy — do not rely on it for schedules.
 
 ## Cursor Cloud specific instructions
 
 ### Environment
 - Python 3.12+. `./venv/bin/pip install -r requirements.txt` (+ `requirements-dev.txt` for tests).
 - `.env` drives config (`load_dotenv`). Restart Flask after `.env` edits (reloader does not watch it).
-- Redis only needed for Celery.
+- Production data refresh uses **crontab**, not Celery. Redis is optional (legacy Celery only).
 
 ### Running the app
 ```bash
@@ -51,11 +54,20 @@ Populate / refresh MySQL view tables:
 ```bash
 ./venv/bin/python scripts/populate_views.py --tables all --force
 ./venv/bin/python scripts/populate_views.py --tables markets,exchanges
+./venv/bin/python scripts/populate_views.py --sync-platforms
+./venv/bin/python scripts/populate_views.py --patch-cmc
+./venv/bin/python scripts/populate_views.py --patch-defillama
 ```
 
-Legacy ApiCache sync (coin detail / search still need this):
+Cron (production):
 ```bash
-./venv/bin/python scripts/sync_coingecko.py --tasks top-coins,ohlc,search
+crontab deploy/crontab.example
+# logs: ~/logs/cryptodash/cron.log
+```
+
+Legacy ApiCache sync (coin detail / search warmers; also daily via cron `warm-apicache`):
+```bash
+./venv/bin/python scripts/sync_coingecko.py --tasks top-coins,ohlc,search,exchange-details --limit 15
 ```
 
 ### Non-obvious gotchas

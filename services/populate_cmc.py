@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 
 from clients import cmc_client
 from models import MarketCoin, db
+from services.asset_identity import merge_external_ids
 
 logger = logging.getLogger(__name__)
 
@@ -120,8 +121,14 @@ def patch_market_metrics(*, start: int = 1, limit: int = 500, convert: str = "US
         if item.get("total_supply") is not None:
             coin.total_supply = float(item["total_supply"])
 
+        coin.external_ids = merge_external_ids(
+            coin.external_ids,
+            cmc=item.get("id"),
+            cmc_slug=(item.get("slug") or "").lower() or None,
+        )
         coin.source = SOURCE
         coin.synced_at = now
+        coin.metrics_synced_at = now
         updated += 1
 
     db.session.commit()

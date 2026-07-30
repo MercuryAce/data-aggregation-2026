@@ -32,6 +32,7 @@ def test_patch_market_metrics_matches_slug(app, monkeypatch):
             "fetch_listings",
             lambda **kwargs: [
                 {
+                    "id": 1,
                     "slug": "bitcoin",
                     "symbol": "BTC",
                     "circulating_supply": 19e6,
@@ -58,6 +59,9 @@ def test_patch_market_metrics_matches_slug(app, monkeypatch):
         assert coin.total_volume == 2e10
         assert coin.market_cap_rank == 1  # rank untouched
         assert coin.source == "cmc"
+        assert coin.metrics_synced_at is not None
+        assert (coin.external_ids or {}).get("cmc") == 1
+        assert (coin.external_ids or {}).get("cmc_slug") == "bitcoin"
 
 
 def test_patch_skips_ambiguous_symbol(app, monkeypatch):

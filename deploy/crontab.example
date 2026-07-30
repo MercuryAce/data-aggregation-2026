@@ -1,0 +1,35 @@
+# CryptoDash production refresh (crontab)
+# Install (as the deploy user, usually triolus):
+#   crontab deploy/crontab.example
+# Or merge into: crontab -e
+#
+# Requires: flock (util-linux), venv at APP_ROOT/venv, .env with API keys + DATABASE_URI.
+# Logs: ~/logs/cryptodash/cron.log  (override with CRYPTODASH_LOG_DIR)
+#
+# Verify: grep CRON /var/log/syslog | tail
+# Manual: CRYPTODASH_ROOT=/var/www/html/cryptodash /var/www/html/cryptodash/scripts/run_cron.sh markets
+
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+CRYPTODASH_ROOT=/var/www/html/cryptodash
+
+# Markets structure (CoinGecko) every 30 minutes
+*/30 * * * * $CRYPTODASH_ROOT/scripts/run_cron.sh markets
+
+# Chain/contract identity (CoinGecko coins/list) daily at 02:30 UTC
+30 2 * * * $CRYPTODASH_ROOT/scripts/run_cron.sh sync-platforms
+
+# Live price pulse (DefiLlama) every minute — price only
+* * * * * $CRYPTODASH_ROOT/scripts/run_cron.sh patch-defillama
+
+# Richer metrics patch (CMC) every 12 minutes — mcap / volume / %
+*/12 * * * * $CRYPTODASH_ROOT/scripts/run_cron.sh patch-cmc
+
+# Trending every hour at :05
+5 * * * * $CRYPTODASH_ROOT/scripts/run_cron.sh trending
+
+# Exchanges + Categories daily at 03:15 UTC
+15 3 * * * $CRYPTODASH_ROOT/scripts/run_cron.sh exchanges-categories
+
+# ApiCache warmers (coin / OHLC / search / exchange detail) daily at 04:00 UTC
+0 4 * * * $CRYPTODASH_ROOT/scripts/run_cron.sh warm-apicache

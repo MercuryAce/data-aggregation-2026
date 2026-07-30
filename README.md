@@ -18,7 +18,7 @@ Other API clients (CMC, Alpha Vantage, DefiLlama, Messari, LunarCrush) are prese
 - Python 3.12+
 - MySQL 8+ (database + user already created)
 - CoinGecko API key in `.env`
-- Optional: Redis (Celery only)
+- Optional: Redis (only if you still use legacy Celery)
 
 ## Setup
 
@@ -41,7 +41,10 @@ Copy or edit `.env`. Important keys:
 
 URL-encode special characters in the DB password (`/` → `%2F`, `+` → `%2B`).
 
-Tables are created automatically on app start (`db.create_all()`).
+Tables are created automatically on app start (`db.create_all()`). Existing DBs also get
+generic identity columns via `ensure_market_coin_identity_columns()` (`platforms`,
+`primary_chain`, `contract_address`, `external_ids`, `structure_synced_at`,
+`metrics_synced_at`) — names stay provider-agnostic so quote oracles can change later.
 
 ## Populate MySQL view tables
 
@@ -55,20 +58,27 @@ Selective:
 
 ```bash
 ./venv/bin/python scripts/populate_views.py --tables markets,exchanges,trending,categories
+./venv/bin/python scripts/populate_views.py --sync-platforms
 ```
 
-Patch live Markets metrics from CMC (keeps CoinGecko rank / row identity):
+Patch live Markets metrics (keeps CoinGecko rank / row identity):
 
 ```bash
 ./venv/bin/python scripts/populate_views.py --patch-cmc
+./venv/bin/python scripts/populate_views.py --patch-defillama
 ```
 
-Celery (with Redis) schedules:
+`--sync-platforms` fills generic chain/contract fields from CoinGecko `coins/list`.
+DefiLlama patches derive quote keys from those fields (fallback `coingecko:{id}`).
+
+Celery schedules are **legacy**. Production refresh uses **crontab** (see below).
 
 | Job | Cadence | Target |
 |-----|---------|--------|
 | CG Markets structure | 30 min | MySQL `market_coins` |
-| CMC metrics patch | 12 min | MySQL `market_coins` prices |
+| CG platforms / contracts | daily | MySQL `market_coins` identity cols |
+| DefiLlama price pulse | 60 s | MySQL `market_coins` price |
+| CMC metrics patch | 12 min | MySQL `market_coins` mcap / volume / % |
 | CG Trending | 1 hour | MySQL `trending_*` |
 | CG Exchanges | daily | MySQL `exchanges` |
 | CG Categories | daily | MySQL `categories` |
@@ -126,16 +136,48 @@ Open [http://127.0.0.1:5000](http://127.0.0.1:5000).
 | `/exchange/<id>` | ApiCache + live-fill on miss |
 | `/news` | CryptoPanic embed widgets |
 
-## Celery (optional)
+## Production refresh (crontab)
 
-For scheduled background syncs (legacy tasks still registered):
+**Preferred.** Cron calls existing CLIs — no Celery Beat/worker required.
 
 ```bash
-# Terminal 1 — worker
-celery -A celery_app.celery worker --loglevel=info
+# Install example crontab (edit CRYPTODASH_ROOT if needed)
+crontab deploy/crontab.example
 
-# Terminal 2 — one Beat process only
-celery -A celery_app.celery beat --loglevel=info
+# Or merge jobs into: crontab -e
+```
+
+Wrapper: [`scripts/run_cron.sh`](scripts/run_cron.sh) (logging + `flock` so jobs do not overlap).
+
+| Job | Cadence |
+|----------|---------|
+| `run_cron.sh markets` | every 30 min |
+| `run_cron.sh sync-platforms` | daily |
+| `run_cron.sh patch-defillama` | every **60 s** (price pulse) |
+| `run_cron.sh patch-cmc` | every 12 min |
+| `run_cron.sh trending` | hourly |
+| `run_cron.sh exchanges-categories` | daily |
+| `run_cron.sh warm-apicache` | daily |
+
+Logs: `~/logs/cryptodash/cron.log` (override with `CRYPTODASH_LOG_DIR`).
+
+```bash
+# Manual smoke test
+CRYPTODASH_ROOT=/var/www/html/cryptodash /var/www/html/cryptodash/scripts/run_cron.sh markets
+CRYPTODASH_ROOT=/var/www/html/cryptodash /var/www/html/cryptodash/scripts/run_cron.sh patch-cmc
+tail -n 50 ~/logs/cryptodash/cron.log
+```
+
+Verify cron ran: `grep CRON /var/log/syslog | tail`
+
+## Celery (legacy / optional)
+
+Task modules remain for ad-hoc use, but **do not run Beat/worker in production** if crontab is installed.
+
+```bash
+# Only if you intentionally use Celery instead of cron:
+./venv/bin/celery -A celery_app.celery worker --loglevel=INFO --concurrency=2
+./venv/bin/celery -A celery_app.celery beat --loglevel=INFO
 ```
 
 Requires Redis (`CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND` in `.env`).
@@ -156,6 +198,8 @@ blueprints/views/           # DB-read Market / Exchanges / Trending / Categories
 blueprints/coingecko/       # Coin detail, search, news, OHLC
 services/populate_coingecko.py
 scripts/populate_views.py
+scripts/run_cron.sh            # cron entrypoint (flock + logging)
+deploy/crontab.example         # production schedule
 clients/                    # cg, cmc, av, defillama, messari, lunarcrush
 models.py                   # ApiCache + typed view tables
 templates/
