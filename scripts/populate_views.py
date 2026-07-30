@@ -66,7 +66,12 @@ def main() -> int:
     parser.add_argument(
         "--patch-oracle-quotes",
         action="store_true",
-        help="Upsert oracle mids (CG/CMC/DefiLlama/AV) into asset_quotes",
+        help="Upsert oracle mids (CG/CMC/DefiLlama) into asset_quotes",
+    )
+    parser.add_argument(
+        "--patch-av-quotes",
+        action="store_true",
+        help="Upsert Alpha Vantage BTC mid (daily — free tier ~25 req/day)",
     )
     parser.add_argument(
         "--patch-venue-quotes",
@@ -87,12 +92,13 @@ def main() -> int:
         and not args.patch_defillama
         and not args.sync_platforms
         and not args.patch_oracle_quotes
+        and not args.patch_av_quotes
         and not args.patch_venue_quotes
     ):
         parser.error(
             "Provide --tables and/or --sync-platforms and/or --patch-cmc "
             "and/or --patch-defillama and/or --patch-oracle-quotes "
-            "and/or --patch-venue-quotes"
+            "and/or --patch-av-quotes and/or --patch-venue-quotes"
         )
 
     with app.app_context():
@@ -122,11 +128,14 @@ def main() -> int:
             n = populate_quotes.patch_oracle_quotes(limit=args.quotes_limit)
             logger.info("Oracle quotes upsert writes ~%s", n)
 
+        if args.patch_av_quotes:
+            n = populate_quotes.patch_alphavantage_quotes()
+            logger.info("AV oracle quotes upsert writes ~%s", n)
+
         if args.patch_venue_quotes:
             n = populate_quotes.patch_venue_quotes(limit=args.quotes_limit)
             logger.info("Venue quotes upsert writes ~%s", n)
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

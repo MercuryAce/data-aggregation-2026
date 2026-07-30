@@ -57,8 +57,12 @@ def _top_coins(limit: int) -> list[MarketCoin]:
     )
 
 
-def patch_oracle_quotes(*, limit: int = 20) -> int:
-    """Store CG / CMC / DefiLlama / Alpha Vantage mids for top assets."""
+def patch_oracle_quotes(*, limit: int = 20, include_alphavantage: bool = False) -> int:
+    """Store CG / CMC / DefiLlama (/ optional AV) mids for top assets.
+
+    Alpha Vantage free tier is ~25 req/day — keep it off the 2-minute cron;
+    use ``include_alphavantage=True`` from the daily job only.
+    """
     coins = _top_coins(limit)
     if not coins:
         return 0
@@ -162,42 +166,57 @@ def patch_oracle_quotes(*, limit: int = 20) -> int:
     except Exception:
         logger.exception("CMC oracle spread failed")
 
-    # Alpha Vantage: BTC (+ ETH if free tier allows) — 1 req/sec, sparse
-    import time
-
-    av_symbols = [("bitcoin", "BTC"), ("ethereum", "ETH")]
-    for i, (cg_id, fx) in enumerate(av_symbols):
-        if not any(c.cg_id == cg_id for c in coins):
-            continue
-        if i:
-            time.sleep(1.1)
-        try:
-            payload = av_client.get_currency_exchange_rate(
-                from_currency=fx, to_currency="USD"
-            )
-            block = (payload or {}).get("Realtime Currency Exchange Rate") or {}
-            rate = block.get("5. Exchange Rate")
-            bid = block.get("8. Bid Price")
-            ask = block.get("9. Ask Price")
-            if rate is None:
-                continue
-            _upsert_quote(
-                cg_id=cg_id,
-                venue="alphavantage",
-                kind="oracle",
-                pair=f"{fx}/USD",
-                bid=float(bid) if bid else None,
-                ask=float(ask) if ask else None,
-                last=float(rate),
-                now=now,
-            )
-            updated += 1
-        except Exception:
-            logger.exception("Alpha Vantage oracle failed for %s", cg_id)
+    # Alpha Vantage: free tier ~25/day — opt-in only (prefer patch_alphavantage_quotes)
+    if include_alphavantage:
+        updated += _patch_alphavantage_btc(now)
 
     db.session.commit()
     logger.info("Oracle quotes upserted (~%s writes)", updated)
     return updated
+
+
+def _patch_alphavantage_btc(now: datetime | None = None) -> int:
+    """One AV request for BTC. Returns write count (0 or 1); caller commits."""
+    now = now or _utcnow()
+    try:
+        payload = av_client.get_currency_exchange_rate(
+            from_currency="BTC", to_currency="USD"
+        )
+        block = (payload or {}).get("Realtime Currency Exchange Rate") or {}
+        rate = block.get("5. Exchange Rate")
+        bid = block.get("8. Bid Price")
+        ask = block.get("9. Ask Price")
+        if rate is None:
+            return 0
+        _upsert_quote(
+            cg_id="bitcoin",
+            venue="alphavantage",
+            kind="oracle",
+            pair="BTC/USD",
+            bid=float(bid) if bid else None,
+            ask=float(ask) if ask else None,
+            last=float(rate),
+            now=now,
+        )
+        return 1
+    except av_client.AvAPIError as exc:
+        if exc.is_rate_limit:
+            logger.warning("Alpha Vantage rate-limited for bitcoin: %s", exc.message)
+        else:
+            logger.warning("Alpha Vantage oracle skipped for bitcoin: %s", exc)
+        return 0
+    except Exception:
+        logger.exception("Alpha Vantage oracle failed for bitcoin")
+        return 0
+
+
+def patch_alphavantage_quotes() -> int:
+    """Daily AV BTC mid only (does not call CG/CMC/DefiLlama)."""
+    n = _patch_alphavantage_btc()
+    if n:
+        db.session.commit()
+    logger.info("Alpha Vantage quotes upserted (%s)", n)
+    return n
 
 
 def patch_venue_quotes(*, limit: int = 20, include_okx: bool = True) -> int:

@@ -91,12 +91,18 @@ def test_get_gold_silver_spot_builds_query(monkeypatch):
 def test_call_raises_on_soft_error_note(monkeypatch):
     class FakeResponse:
         ok = True
-        url = "https://www.alphavantage.co/query?function=GLOBAL_QUOTE"
+        url = "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&apikey=SECRETKEY123"
         text = ""
 
         def json(self):
-            return {"Note": "Thank you for using Alpha Vantage! Our standard API rate limit is 25 requests per day."}
+            return {
+                "Note": (
+                    "We have detected your API key as SECRETKEY123 and our "
+                    "standard API rate limit is 25 requests per day."
+                )
+            }
 
+    monkeypatch.setattr(av_client, "API_KEY", "SECRETKEY123")
     monkeypatch.setattr(
         av_client.session,
         "get",
@@ -105,6 +111,10 @@ def test_call_raises_on_soft_error_note(monkeypatch):
     with pytest.raises(av_client.AvAPIError) as exc:
         av_client._call({"function": "GLOBAL_QUOTE", "symbol": "IBM"})
     assert "rate limit" in exc.value.message.lower() or "Note" in str(exc.value)
+    assert "SECRETKEY123" not in str(exc.value)
+    assert "SECRETKEY123" not in exc.value.url
+    assert "apikey=***" in exc.value.url
+    assert exc.value.is_rate_limit
 
 
 def test_call_raises_on_error_message(monkeypatch):

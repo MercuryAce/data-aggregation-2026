@@ -23,11 +23,14 @@ CRYPTODASH_ROOT=/var/www/html/cryptodash
 * * * * * $CRYPTODASH_ROOT/scripts/run_cron.sh patch-defillama
 
 # Oracle + venue bid/ask quotes (source spread / spot display) every 2 minutes
+# (Alpha Vantage excluded — free tier ~25/day)
 */2 * * * * $CRYPTODASH_ROOT/scripts/run_cron.sh patch-quotes
 
+# Alpha Vantage BTC oracle once daily (keeps free-tier budget)
+15 5 * * * $CRYPTODASH_ROOT/scripts/run_cron.sh patch-av-quotes
+
 # Richer metrics patch (CMC) every 12 minutes — mcap / volume / %
-*/12 * * * * $CRYPTODASH_ROOT/scripts/run_cron.sh patch-cmc
-# Trending every hour at :05
+*/12 * * * * $CRYPTODASH_ROOT/scripts/run_cron.sh patch-cmc# Trending every hour at :05
 5 * * * * $CRYPTODASH_ROOT/scripts/run_cron.sh trending
 
 # Exchanges + Categories daily at 03:15 UTC

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -15,6 +17,17 @@ BASE_URL = (Config.ALPHAVANTAGE_BASE_URL or "https://www.alphavantage.co/query")
 REQUEST_TIMEOUT = Config.ALPHAVANTAGE_REQUEST_TIMEOUT
 
 SOFT_ERROR_KEYS = ("Note", "Information", "Error Message")
+_APIKEY_QUERY_RE = re.compile(r"([?&]apikey=)[^&\s]+", re.IGNORECASE)
+
+
+def redact_secrets(text: str) -> str:
+    """Strip API keys from URLs and AV soft-error copy before logging."""
+    if not text:
+        return text
+    out = _APIKEY_QUERY_RE.sub(r"\1***", text)
+    if API_KEY:
+        out = out.replace(API_KEY, "***")
+    return out
 
 
 def _build_session():
@@ -43,9 +56,14 @@ class AvAPIError(Exception):
 
     def __init__(self, status_code: int, message: str, url: str):
         self.status_code = status_code
-        self.message = message
-        self.url = url
-        super().__init__(f"{status_code} {message} ({url})")
+        self.message = redact_secrets(message)
+        self.url = redact_secrets(url)
+        super().__init__(f"{status_code} {self.message} ({self.url})")
+
+    @property
+    def is_rate_limit(self) -> bool:
+        text = (self.message or "").lower()
+        return "rate limit" in text or "25 requests per day" in text
 
 
 def _call(params: dict | None = None):
@@ -54,6 +72,7 @@ def _call(params: dict | None = None):
         query["apikey"] = API_KEY
 
     response = session.get(BASE_URL, params=query, timeout=REQUEST_TIMEOUT)
+    safe_url = redact_secrets(response.url)
     if not response.ok:
         detail = ""
         try:
@@ -66,13 +85,13 @@ def _call(params: dict | None = None):
             )
         except Exception:
             detail = response.text[:200] or response.reason
-        raise AvAPIError(response.status_code, str(detail), response.url)
+        raise AvAPIError(response.status_code, str(detail), safe_url)
 
     data = response.json()
     if isinstance(data, dict):
         for key in SOFT_ERROR_KEYS:
             if key in data and data[key]:
-                raise AvAPIError(200, str(data[key]), response.url)
+                raise AvAPIError(200, str(data[key]), safe_url)
     return data
 
 
