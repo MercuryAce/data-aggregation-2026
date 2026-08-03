@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
 from flask_caching import Cache
-
 from handlers.guards import (
     guard_request,
     guarded_render,
@@ -62,7 +61,11 @@ def init_views_blueprint(cache: Cache, limiter=None):
 
             rows = (
                 db.session.query(MarketCoin)
-                .order_by(MarketCoin.market_cap_rank.asc())
+                .order_by(
+                    MarketCoin.market_cap_rank.is_(None),
+                    MarketCoin.market_cap_rank.asc(),
+                    MarketCoin.market_cap.desc(),  # Sort by market cap descending
+                )
                 .offset((page_num - 1) * MARKETS_PER_PAGE)
                 .limit(MARKETS_PER_PAGE)
                 .all()

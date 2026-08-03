@@ -101,7 +101,12 @@
                 <tbody>
                     {% for coin in coins %}
                     <tr data-coin-id="{{ coin['id'] }}">
-                        <td class="text-muted text-nowrap small">{{ coin.get('market_cap_rank') or ((page - 1) * per_page + loop.index) }}</td>
+                        <td class="text-muted text-nowrap small">
+                            {% if coin.get('market_cap_rank') is not none %}
+                                {{ coin['market_cap_rank'] }}
+                            {% else %}
+                                -
+                            {% endif %}</td>
                         <td>
                             <div class="d-flex align-items-center">
                                 <img src="{{ coin['image'] or 'https://via.placeholder.com/26' }}"
