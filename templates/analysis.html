@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}{{ coin.get('name', 'Coin') }} Analysis - CryptoDash{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+  <a href="{{ url_for('cg.coin', coin_id=coin_id) }}">&larr; Back to {{ coin.get('name') }}</a>
+</div>
+
+<h1>{{ coin.get('name') }} analysis</h1>
+<p class="text-muted">vs {{ vs }} · {{ window }}d</p>
+
+{% if analysis and analysis.get('available') %}
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <p><strong>Observations:</strong> {{ analysis.get('observations') }}</p>
+      {% set rel = analysis.get('relative') or {} %}
+      <p><strong>Correlation:</strong> {{ "%.3f"|format(rel.get('correlation') or 0) }}</p>
+      <p><strong>Beta:</strong> {{ "%.3f"|format(rel.get('beta') or 0) }}</p>
+      <p><strong>R²:</strong> {{ "%.3f"|format(rel.get('r_squared') or 0) }}</p>
+    </div>
+  </div>
+{% else %}
+  <div class="alert alert-secondary" role="status">
+    No data for analysis. Check back soon for updates.
+  </div>
+{% endif %}
+{% endblock %}

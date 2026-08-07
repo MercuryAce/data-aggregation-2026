@@ -56,3 +56,8 @@ class Config:
     MONGODB_DB = os.getenv("MONGODB_DB", "cryptodash")
     # X.509 client cert for Atlas (absolute or project-relative path)
     MONGODB_TLS_CERT_FILE = os.getenv("MONGODB_TLS_CERT_FILE", "")
+
+    ANALYTICS_API_URL = (os.getenv("ANALYTICS_API_URL") or "").rstrip("/")
+    ANALYTICS_API_KEY = os.getenv("ANALYTICS_API_KEY", "")
+    ANALYTICS_TIMEOUT = int(os.getenv("ANALYTICS_TIMEOUT", "5"))
+    ANALYTICS_CACHE_SECONDS = int(os.getenv("ANALYTICS_CACHE_SECONDS", "1800"))

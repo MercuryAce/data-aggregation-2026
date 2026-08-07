@@ -8,12 +8,15 @@ from handlers.guards import (
     guarded_render,
     rate_limit,
 )
+from models import db, MarketCoin
+from services.cache_store import CacheMissError
 from services.coingecko_service import (
     get_coin_details,
     get_exchange_details,
     get_ohlc,
     get_search,
 )
+from services.analysis_client import fetch_analysis
 
 cg_bp = Blueprint("cg", __name__, url_prefix="")
 
@@ -94,5 +97,27 @@ def init_cg_blueprint(cache: Cache, limiter=None):
     @cg_bp.route("/news")
     def news():
         return render_template("news.html")
+
+    @cg_bp.route("/coin/analysis/<coin_id>")
+    @cache.cached(timeout=60, query_string=True, response_filter=only_cache_success)
+    @rate_limit(limiter, "5 per minute")
+    def coin_analysis(coin_id):
+        guard_request(f"coin_analysis_last_hit_{coin_id}", cooldown=3)
+        def fetch_context():
+            row = db.session.get(MarketCoin, coin_id)
+            if row is None:
+                raise CacheMissError(f"unknown coin: {coin_id}")
+            return {
+                "coin": row.to_market_dict(),
+                "coin_id": coin_id,
+                "vs": request.args.get("vs", "gold"),
+                "window": request.args.get("window", 90, type=int),
+                "analysis": fetch_analysis(
+                    coin_id, 
+                    vs=request.args.get("vs", "gold"), 
+                    window=request.args.get("window", 90, type=int)
+                )
+            }
+        return guarded_render("analysis.html", fetch_context)
 
     return cg_bp
