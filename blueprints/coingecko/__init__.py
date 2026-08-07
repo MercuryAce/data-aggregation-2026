@@ -16,7 +16,7 @@ from services.coingecko_service import (
     get_ohlc,
     get_search,
 )
-from services.analysis_client import fetch_analysis
+from services.analysis_client import default_baseline, fetch_analysis
 
 cg_bp = Blueprint("cg", __name__, url_prefix="")
 
@@ -103,21 +103,36 @@ def init_cg_blueprint(cache: Cache, limiter=None):
     @rate_limit(limiter, "5 per minute")
     def coin_analysis(coin_id):
         guard_request(f"coin_analysis_last_hit_{coin_id}", cooldown=3)
+
         def fetch_context():
             row = db.session.get(MarketCoin, coin_id)
             if row is None:
                 raise CacheMissError(f"unknown coin: {coin_id}")
+
+            window = request.args.get("window", 90, type=int)
+            vs_param = request.args.get("vs")
+            vs = vs_param if vs_param else default_baseline(coin_id)
+
+            analysis = fetch_analysis(coin_id, vs=vs, window=window)
+            analysis_macro = None
+            analysis_crypto = None
+            if coin_id == "bitcoin":
+                if vs != "gold":
+                    analysis_macro = fetch_analysis(coin_id, vs="gold", window=window)
+            else:
+                analysis_macro = fetch_analysis(coin_id, vs="gold", window=window)
+                analysis_crypto = fetch_analysis(coin_id, vs="bitcoin", window=window)
+
             return {
                 "coin": row.to_market_dict(),
                 "coin_id": coin_id,
-                "vs": request.args.get("vs", "gold"),
-                "window": request.args.get("window", 90, type=int),
-                "analysis": fetch_analysis(
-                    coin_id,
-                    vs=request.args.get("vs", "gold"),
-                    window=request.args.get("window", 90, type=int)
-                )
+                "vs": vs,
+                "window": window,
+                "analysis": analysis,
+                "analysis_macro": analysis_macro,
+                "analysis_crypto": analysis_crypto,
             }
+
         return guarded_render("analysis.html", fetch_context)
 
     return cg_bp
