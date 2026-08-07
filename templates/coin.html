@@ -46,7 +46,9 @@
                     <span>
                         {% set coin_id = coin.get('id') %}
                         {% if coin_id %}
-                        <a class="btn btn-outline-primary btn-sm" href="{{ url_for('cg.coin_analysis', coin_id=coin_id) }}">
+                        <a 
+                            class="btn btn-outline-primary btn-sm" 
+                            href="{{ url_for('cg.coin_analysis', coin_id=coin_id) }}">
                             Analysis
                         </a>
                         {% endif %}

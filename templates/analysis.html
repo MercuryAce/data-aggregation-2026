@@ -12,13 +12,21 @@
 
 {% if analysis and analysis.get('available') %}
   <div class="card shadow-sm mb-4">
-    <div class="card-body">
+    <div class="card-body text-muted">
       <p><strong>Observations:</strong> {{ analysis.get('observations') }}</p>
+      <p class="text-muted small">Observations numbers the daily data points we actually compared for {{ coin.get('name') }} versus its baseline over the chosen window. </p>
       {% set rel = analysis.get('relative') or {} %}
-      <p><strong>Correlation:</strong> {{ "%.3f"|format(rel.get('correlation') or 0) }}</p>
-      <p><strong>Beta:</strong> {{ "%.3f"|format(rel.get('beta') or 0) }}</p>
+      <p><strong>Correlation:</strong> {{ "%.3f"|format(rel.get('correlation') or 0) }} </p><p><small class="text-muted">The correlation between the price of {{ coin.get('name') }} and its reference asset {{ vs }} </small></p>
+      <p><strong>β (Beta):</strong> {{ "%.3f"|format(rel.get('beta') or 0) }}</p>
+      <p><small class="text-muted">
+        Sensitivity of {{ coin.get('name') }}’s daily returns to {{ vs }}’s daily returns.
+        β = 1 moves in step; β &lt; 1 less amplified; β &gt; 1 more amplified.
+      </small></p>
       <p><strong>R²:</strong> {{ "%.3f"|format(rel.get('r_squared') or 0) }}</p>
-    </div>
+      <p><small class="text-muted">
+        Coefficient of determination: how much of {{ coin.get('name') }}’s daily variation
+        is explained by linear co-movement with {{ vs }} over this window (0–1).
+      </small></p></div>
   </div>
 {% else %}
   <div class="alert alert-secondary" role="status">

@@ -113,8 +113,8 @@ def init_cg_blueprint(cache: Cache, limiter=None):
                 "vs": request.args.get("vs", "gold"),
                 "window": request.args.get("window", 90, type=int),
                 "analysis": fetch_analysis(
-                    coin_id, 
-                    vs=request.args.get("vs", "gold"), 
+                    coin_id,
+                    vs=request.args.get("vs", "gold"),
                     window=request.args.get("window", 90, type=int)
                 )
             }

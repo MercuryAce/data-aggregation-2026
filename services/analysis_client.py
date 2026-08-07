@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def fetch_analysis(
     coin_id: str,
     *,
-    vs: str = "gold",
+    vs: str = "ethereum",
     window: int = 90,
 ) -> dict | None:
     base = Config.ANALYTICS_API_URL
