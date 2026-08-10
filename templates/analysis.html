@@ -7,25 +7,25 @@
     {% set rel = block.get('relative') or {} %}
     <div class="hierarchy-col">
       <h6 class="text-muted text-uppercase small mb-2">{{ baseline_label }}</h6>
-      <p class="mb-1"><strong>ρ</strong> {{ "%.3f"|format(rel.get('correlation') or 0) }}</p>
-      <p class="mb-1"><strong>β</strong> {{ "%.3f"|format(rel.get('beta') or 0) }}</p>
-      <p class="mb-2"><strong>R²</strong> {{ "%.3f"|format(rel.get('r_squared') or 0) }}</p>
+      <p class="text-muted mb-1"><strong>ρ</strong> {{ "%.3f"|format(rel.get('correlation') or 0) }}</p>
+      <p class="text-muted mb-1"><strong>β</strong> {{ "%.3f"|format(rel.get('beta') or 0) }}</p>
+      <p class="text-muted mb-2"><strong>R²</strong> {{ "%.3f"|format(rel.get('r_squared') or 0) }}</p>
       <a href="{{ url_for('cg.coin_analysis', coin_id=coin_id, vs=baseline_slug, window=window) }}"
-         class="btn btn-sm btn-outline-secondary{% if vs == baseline_slug %} active{% endif %}">
+         class="btn btn-sm btn-outline-secondary text-muted {% if vs == baseline_slug %} active{% endif %}">
         View vs {{ baseline_slug }}
       </a>
     </div>
   {% else %}
     <div class="hierarchy-col text-muted small">
       <h6 class="text-muted text-uppercase small mb-2">{{ baseline_label }}</h6>
-      <p class="mb-0">No data for this comparison.</p>
+      <p class="text-muted mb-0">No data for this comparison.</p>
     </div>
   {% endif %}
 {% endmacro %}
 
 {% macro inference_line(label, p_value, ci) %}
   {% if p_value is not none %}
-    <p class="mb-1">
+    <p class="text-muted mb-1">
       <strong>{{ label }} p-value:</strong> {{ "%.4f"|format(p_value) }}
       {% if p_value <= 0.05 %}
         <span class="text-green small">— statistically significant at 95% (historical window only)</span>
@@ -40,12 +40,12 @@
 {% endmacro %}
 
 {% block content %}
-<div class="mb-3">
+<div class="text-muted mb-3">
   <a href="{{ url_for('cg.coin', coin_id=coin_id) }}">&larr; Back to {{ coin.get('name') }}</a>
 </div>
 
 <div class="page-header">
-  <h1 class="page-title mb-1">{{ coin.get('name') }} analysis</h1>
+  <h1 class="page-title text-muted mb-1">{{ coin.get('name') }} analysis</h1>
   <p class="text-muted mb-0">
     Active baseline: <strong>{{ vs }}</strong> · {{ window }}d window
   </p>
@@ -53,19 +53,19 @@
 
 {% if coin_id != 'bitcoin' or analysis_macro %}
 <div class="card shadow-sm mb-4">
-  <div class="card-header bg-transparent border-secondary">
-    <h2 class="h5 mb-0">Comparison hierarchy</h2>
-    <p class="text-muted small mb-0 mt-1">
+  <div class="card-header bg-transparent border-secondary text-muted">
+    <h2 class="h5 text-muted mb-0">Comparison hierarchy</h2>
+    <p class="text-muted small mb-0 mt-1 text-muted">
       Macro layer (hard assets) and crypto layer (market beta) for {{ coin.get('name') }}.
     </p>
   </div>
   <div class="card-body">
-    <div class="row g-4">
-      <div class="col-md-6">
+    <div class="row g-4 text-muted">
+      <div class="col-md-6 text-muted">
         {{ hierarchy_stats(analysis_macro, 'Macro vs gold', 'gold', coin_id, vs, window) }}
       </div>
       {% if coin_id != 'bitcoin' %}
-      <div class="col-md-6">
+      <div class="col-md-6 text-muted">
         {{ hierarchy_stats(analysis_crypto, 'Crypto vs bitcoin', 'bitcoin', coin_id, vs, window) }}
       </div>
       {% endif %}
@@ -83,9 +83,9 @@
   <div class="row g-4 mb-4">
     <div class="col-lg-6">
       <div class="card shadow-sm h-100">
-        <div class="card-header bg-transparent border-secondary">
-          <h2 class="h5 mb-0">Normalized prices</h2>
-          <p class="text-muted small mb-0">Rebased to 100 at window start</p>
+        <div class="card-header bg-transparent border-secondary text-muted">
+          <h2 class="h5 text-muted mb-0">Normalized prices</h2>
+          <p class="text-muted small mb-0 text-muted">Rebased to 100 at window start</p>
         </div>
         <div class="card-body">
           <div class="chart-wrap" style="height: 280px;">
@@ -96,9 +96,9 @@
     </div>
     <div class="col-lg-6">
       <div class="card shadow-sm h-100">
-        <div class="card-header bg-transparent border-secondary">
-          <h2 class="h5 mb-0">Cumulative return</h2>
-          <p class="text-muted small mb-0">Percent change from window start</p>
+        <div class="card-header bg-transparent border-secondary text-muted">
+          <h2 class="h5 text-muted mb-0">Cumulative return</h2>
+          <p class="text-muted small mb-0 text-muted">Percent change from window start</p>
         </div>
         <div class="card-body">
           <div class="chart-wrap" style="height: 280px;">
@@ -111,27 +111,27 @@
 
   <div class="card shadow-sm mb-4">
     <div class="card-header bg-transparent border-secondary">
-      <h2 class="h5 mb-0">Descriptive statistics</h2>
-      <p class="text-muted small mb-0">vs {{ vs }} · {{ analysis.get('observations') }} daily observations</p>
+      <h2 class="h5 text-muted mb-0">Descriptive statistics</h2>
+      <p class="text-muted small mb-0 text-muted">vs {{ vs }} · {{ analysis.get('observations') }} daily observations</p>
     </div>
     <div class="card-body">
       <div class="row g-3">
         <div class="col-md-4">
-          <p class="mb-1"><strong>Correlation (ρ)</strong></p>
-          <p class="h4 mb-1">{{ "%.3f"|format(rel.get('correlation') or 0) }}</p>
-          <p class="text-muted small mb-0">Linear co-movement of daily returns with {{ vs }}.</p>
+          <p class="text-muted mb-1"><strong>Correlation (ρ)</strong></p>
+          <p class="h4 text-muted mb-1">{{ "%.3f"|format(rel.get('correlation') or 0) }}</p>
+          <p class="text-muted small mb-0 text-muted">Linear co-movement of daily returns with {{ vs }}.</p>
         </div>
         <div class="col-md-4">
-          <p class="mb-1"><strong>Beta (β)</strong></p>
-          <p class="h4 mb-1">{{ "%.3f"|format(rel.get('beta') or 0) }}</p>
-          <p class="text-muted small mb-0">
+          <p class="text-muted mb-1"><strong>Beta (β)</strong></p>
+          <p class="h4 text-muted mb-1">{{ "%.3f"|format(rel.get('beta') or 0) }}</p>
+          <p class="text-muted small mb-0 text-muted">
             Return sensitivity to {{ vs }}. β = 1 moves in step; &lt;1 less amplified; &gt;1 more amplified.
           </p>
         </div>
         <div class="col-md-4">
-          <p class="mb-1"><strong>R²</strong></p>
-          <p class="h4 mb-1">{{ "%.3f"|format(rel.get('r_squared') or 0) }}</p>
-          <p class="text-muted small mb-0">
+          <p class="text-muted mb-1"><strong>R²</strong></p>
+          <p class="h4 text-muted mb-1">{{ "%.3f"|format(rel.get('r_squared') or 0) }}</p>
+          <p class="text-muted small mb-0 text-muted">
             Share of {{ coin.get('name') }}'s daily variation explained by {{ vs }} (0–1).
           </p>
         </div>
@@ -141,8 +141,8 @@
 
   <div class="card shadow-sm mb-4">
     <div class="card-header bg-transparent border-secondary">
-      <h2 class="h5 mb-0">Inferential statistics</h2>
-      <p class="text-muted small mb-0">
+      <h2 class="h5 text-muted mb-0">Inferential statistics</h2>
+      <p class="text-muted small mb-0 text-muted">
         Two-tailed tests on the selected {{ window }}d window — not a forecast.
       </p>
     </div>
@@ -151,7 +151,7 @@
       {{ inference_line('Beta', inf.get('beta_p_value'), inf.get('beta_ci_95')) }}
 
       {% if inf.get('regression_f_stat') is not none and inf.get('regression_f_p_value') is not none %}
-      <p class="mb-1">
+      <p class="text-muted mb-1">
         <strong>Regression F-test:</strong>
         F = {{ "%.3f"|format(inf.get('regression_f_stat')) }},
         p = {{ "%.4f"|format(inf.get('regression_f_p_value')) }}
@@ -164,7 +164,7 @@
       {% endif %}
 
       {% if regime.get('chi2') is not none and regime.get('p_value') is not none %}
-      <p class="mb-1">
+      <p class="text-muted mb-1">
         <strong>Regime independence (2×2 up/down):</strong>
         χ² = {{ "%.3f"|format(regime.get('chi2')) }},
         p = {{ "%.4f"|format(regime.get('p_value')) }}
@@ -177,7 +177,7 @@
       {% endif %}
 
       {% if var_f.get('f_stat') is not none and var_f.get('p_value') is not none %}
-      <p class="mb-0">
+      <p class="text-muted mb-0">
         <strong>Variance ratio F-test:</strong>
         F = {{ "%.3f"|format(var_f.get('f_stat')) }},
         p = {{ "%.4f"|format(var_f.get('p_value')) }}
@@ -187,14 +187,14 @@
   </div>
 
   <div class="alert alert-secondary small mb-4" role="note">
-    <strong>Disclaimer:</strong>
+    <strong class="text-muted">Disclaimer:</strong>
     All statistics describe the selected historical window only. They quantify patterns in past
     daily returns and do not predict future prices, events, or trading outcomes. This is not
     financial advice.
   </div>
 
 {% else %}
-  <div class="alert alert-secondary" role="status">
+  <div class="alert alert-secondary text-muted" role="status">
     No data for analysis. Check back soon for updates.
   </div>
 {% endif %}
