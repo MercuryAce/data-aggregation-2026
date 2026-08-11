@@ -1,27 +1,7 @@
 /* ============================================================
    CryptoDash - unified dark theme / design system
-   Loaded AFTER Bootstrap so these tokens win the cascade.
+   Palette: static/css/tokens.css (load before Bootstrap in base.html)
    ============================================================ */
-
-:root {
-    --bg:            #0d1117;
-    --surface:       #161b22;
-    --surface-2:     #1c2230;
-    --surface-hover: #1f2735;
-    --border:        #2a3038;
-    --border-soft:   #21262d;
-    --text:          #e6edf3;
-    --text-muted:    #8b949e;
-    --accent:        #58a6ff;
-    --accent-hover:  #6cb1ff;
-    --green:         #3fb950;
-    --red:           #f85149;
-    --orange:        #f59e0b;
-    --radius:        12px;
-    --radius-sm:     8px;
-    --shadow:        0 1px 3px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.18);
-    --space:         1.25rem;
-}
 
 /* ---------- Base ---------- */
 body {

@@ -1,0 +1,100 @@
+/* CryptoDash design tokens + Bootstrap variable bridge (load before bootstrap.css) */
+:root {
+    /* App palette */
+    --bg:            #0d1117;
+    --surface:       #161b22;
+    --surface-2:     #1c2230;
+    --surface-hover: #1f2735;
+    --border:        #2a3038;
+    --border-soft:   #21262d;
+    --text:          #e6edf3;
+    --text-muted:    #8b949e;
+    --accent:        #58a6ff;
+    --accent-hover:  #6cb1ff;
+    --green:         #3fb950;
+    --red:           #f85149;
+    --orange:        #f59e0b;
+    --radius:        12px;
+    --radius-sm:     8px;
+    --shadow:        0 1px 3px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.18);
+    --space:         1.25rem;
+
+    color-scheme: dark;
+
+    /* Map Bootstrap 5.3 tokens to our palette so CDN CSS matches main.css */
+    --bs-body-bg:                   var(--bg);
+    --bs-body-color:                var(--text);
+    --bs-emphasis-color:            var(--text);
+    --bs-secondary-color:           var(--text-muted);
+    --bs-secondary-bg:              var(--surface);
+    --bs-tertiary-color:            var(--text-muted);
+    --bs-tertiary-bg:               var(--surface-2);
+    --bs-border-color:              var(--border-soft);
+    --bs-border-color-translucent:  rgba(255, 255, 255, 0.08);
+    --bs-link-color:                var(--accent);
+    --bs-link-hover-color:          var(--accent-hover);
+    --bs-heading-color:             var(--text);
+    --bs-primary:                   var(--accent);
+    --bs-primary-rgb:               88, 166, 255;
+    --bs-success:                   var(--green);
+    --bs-success-rgb:               63, 185, 80;
+    --bs-danger:                    var(--red);
+    --bs-danger-rgb:                248, 81, 73;
+    --bs-warning:                   var(--orange);
+    --bs-warning-rgb:               245, 158, 11;
+    --bs-dark:                      var(--surface);
+    --bs-dark-rgb:                  22, 27, 34;
+    --bs-light:                     var(--surface-2);
+    --bs-light-rgb:                 28, 34, 48;
+    --bs-card-bg:                   var(--surface);
+    --bs-card-border-color:         var(--border-soft);
+    --bs-card-cap-bg:               transparent;
+    --bs-card-color:                var(--text);
+    --bs-navbar-color:              var(--text-muted);
+    --bs-navbar-hover-color:        var(--text);
+    --bs-navbar-active-color:       var(--text);
+    --bs-navbar-brand-color:        var(--text);
+    --bs-navbar-brand-hover-color:  var(--text);
+    --bs-table-bg:                  var(--surface);
+    --bs-table-color:               var(--text);
+    --bs-table-border-color:        var(--border-soft);
+    --bs-table-striped-bg:          var(--surface-2);
+    --bs-table-striped-color:       var(--text);
+    --bs-table-hover-bg:            var(--surface-hover);
+    --bs-table-hover-color:         var(--text);
+    --bs-table-active-bg:           var(--surface-hover);
+    --bs-table-active-color:        var(--text);
+    --bs-form-control-bg:           var(--surface);
+    --bs-form-control-color:        var(--text);
+    --bs-form-control-border-color: var(--border);
+    --bs-input-bg:                  var(--surface);
+    --bs-input-color:               var(--text);
+    --bs-input-border-color:        var(--border);
+    --bs-input-focus-border-color:  var(--accent);
+    --bs-input-focus-box-shadow:    0 0 0 0.2rem rgba(88, 166, 255, 0.15);
+    --bs-pagination-bg:             var(--surface);
+    --bs-pagination-border-color:   var(--border-soft);
+    --bs-pagination-color:          var(--accent);
+    --bs-pagination-hover-bg:       var(--surface-hover);
+    --bs-pagination-hover-color:    var(--text);
+    --bs-pagination-active-bg:      var(--accent);
+    --bs-pagination-active-border-color: var(--accent);
+    --bs-pagination-active-color:   #0d1117;
+    --bs-list-group-bg:             transparent;
+    --bs-list-group-color:          var(--text);
+    --bs-list-group-border-color:   var(--border-soft);
+    --bs-list-group-action-hover-bg: var(--surface-hover);
+    --bs-alert-bg:                  var(--surface);
+    --bs-alert-border-color:        var(--border-soft);
+    --bs-alert-color:               var(--text);
+    --bs-btn-close-color:           var(--text);
+}
+
+html {
+    background-color: var(--bg);
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+}

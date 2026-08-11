@@ -1,0 +1,49 @@
+{# Reveal only after our theme tokens are applied (not Bootstrap defaults) #}
+<script>
+(function () {
+  var revealed = false;
+  var THEME_BG = "rgb(13, 17, 23)";
+
+  function themeApplied() {
+    return getComputedStyle(document.body).backgroundColor === THEME_BG;
+  }
+
+  function reveal() {
+    if (revealed) return;
+    revealed = true;
+    document.documentElement.classList.add("ready");
+  }
+
+  function waitForTheme() {
+    return new Promise(function (resolve) {
+      var attempts = 0;
+      function tick() {
+        if (themeApplied() || attempts++ > 120) resolve();
+        else requestAnimationFrame(tick);
+      }
+      tick();
+    });
+  }
+
+  function waitForPaint() {
+    var fonts = document.fonts && document.fonts.ready
+      ? document.fonts.ready.catch(function () {})
+      : Promise.resolve();
+    Promise.all([
+      new Promise(function (resolve) {
+        if (document.readyState === "complete") resolve();
+        else window.addEventListener("load", resolve, { once: true });
+      }),
+      fonts,
+      waitForTheme()
+    ]).then(function () {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(reveal);
+      });
+    });
+  }
+
+  waitForPaint();
+  setTimeout(reveal, 3000);
+})();
+</script>
