@@ -1,26 +1,81 @@
 import os
 
 from dotenv import load_dotenv
-from flask import Flask, send_from_directory
+from flask import Flask, Response, request
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from blueprints.coingecko import init_cg_blueprint
 from blueprints.views import init_views_blueprint
-from models import db
+from models import MarketCoin, db
 import markdown
+from config import Config
 
 from handlers.errors import register_error_handlers
 from utils.formatters import compact_number, compact_usd
+from utils.seo import build_sitemap_xml, canonical_url
 from sqlalchemy import text
 
 load_dotenv()
 
-# from models import db
 app = Flask(__name__)
-@app.route('/robots.txt')
+
+
+@app.route("/robots.txt")
 def robots():
-    return send_from_directory(app.static_folder, 'robots.txt')
+    site = Config.SITE_URL
+    body = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "\n"
+        "User-agent: GPTBot\n"
+        "Disallow: /\n"
+        "\n"
+        "User-agent: ChatGPT-User\n"
+        "Disallow: /\n"
+        "\n"
+        f"Sitemap: {site}/sitemap.xml\n"
+    )
+    return Response(body, mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap():
+    limit = Config.SITEMAP_COIN_LIMIT
+    entries: list[tuple[str, str, str]] = [
+        ("/", "hourly", "1.0"),
+        ("/exchanges", "daily", "0.8"),
+        ("/trending", "hourly", "0.8"),
+        ("/categories", "daily", "0.7"),
+        ("/news", "hourly", "0.7"),
+    ]
+
+    coins = (
+        db.session.query(MarketCoin.cg_id)
+        .filter(MarketCoin.market_cap_rank.isnot(None))
+        .order_by(MarketCoin.market_cap_rank.asc())
+        .limit(limit)
+        .all()
+    )
+    for (cg_id,) in coins:
+        entries.append((f"/coin/{cg_id}", "hourly", "0.7"))
+        entries.append((f"/coin/analysis/{cg_id}", "daily", "0.8"))
+
+    xml = build_sitemap_xml(Config.SITE_URL, entries)
+    return Response(xml, mimetype="application/xml")
+
+
+@app.context_processor
+def seo_context():
+    default_image = Config.SEO_DEFAULT_IMAGE or f"{Config.SITE_URL}/static/img/logo.png"
+    return {
+        "site_url": Config.SITE_URL,
+        "site_name": Config.SITE_NAME,
+        "site_description": Config.SITE_DESCRIPTION,
+        "site_robots": Config.SITE_ROBOTS,
+        "canonical_url": canonical_url(Config.SITE_URL, request),
+        "og_image": default_image,
+    }
 
 secret_key = os.environ.get("SECRET_KEY")
 

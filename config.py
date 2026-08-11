@@ -61,3 +61,13 @@ class Config:
     ANALYTICS_API_KEY = os.getenv("ANALYTICS_API_KEY", "")
     ANALYTICS_TIMEOUT = int(os.getenv("ANALYTICS_TIMEOUT", "5"))
     ANALYTICS_CACHE_SECONDS = int(os.getenv("ANALYTICS_CACHE_SECONDS", "1800"))
+
+    SITE_URL = (os.getenv("SITE_URL", "https://zixy.co.uk") or "").rstrip("/")
+    SITEMAP_COIN_LIMIT = int(os.getenv("SITEMAP_COIN_LIMIT", "250"))
+    SITE_DESCRIPTION = os.getenv(
+        "SITE_DESCRIPTION",
+        "CryptoDash — live crypto prices, market stats, exchanges, and coin analysis.",
+    )
+    SITE_NAME = os.getenv("SITE_NAME", "CryptoDash")
+    SITE_ROBOTS = os.getenv("SITE_ROBOTS", "index, follow")
+    SEO_DEFAULT_IMAGE = os.getenv("SEO_DEFAULT_IMAGE", "")

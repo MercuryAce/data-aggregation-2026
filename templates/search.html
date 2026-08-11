@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
 {% block title %}Search Results{% endblock %}
+{% block meta_description %}Search cryptocurrencies on CryptoDash.{% endblock %}
+{% block robots %}noindex, follow{% endblock %}
 
 {% block content %}
     {% with title="Search Results", meta='for "' ~ query ~ '" · best-effort (cached / live-fill)' %}

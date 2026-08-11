@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}{{ coin.get('name', 'Coin') }} - CryptoDash{% endblock %}
+{% block meta_description %}{{ coin.get('name', 'Coin') }} ({{ coin.get('symbol', '')|upper }}) — live price, market cap, volume, and 24h change on CryptoDash.{% endblock %}
 
 {% block content %}
 {% set md = coin.get('market_data') or {} %}
