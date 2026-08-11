@@ -1,0 +1,17 @@
+{# Inline critical dark-theme paint — must run before external CSS (prevents white flash) which results from SEO #}
+<style>
+  :root { color-scheme: dark; }
+  html { background-color: #0d1117; }
+  body {
+    background-color: #0d1117;
+    color: #e6edf3;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .navbar { background-color: #161b22 !important; }
+  .navbar-brand, .navbar .nav-link { color: #e6edf3 !important; }
+  .card { background-color: #161b22; color: #e6edf3; border-color: #21262d; }
+  .table, .table-dark { color: #e6edf3; --bs-table-bg: #161b22; --bs-table-color: #e6edf3; }
+  footer.site-footer { background-color: #161b22; color: #8b949e; }
+  a { color: #58a6ff; }
+</style>
