@@ -13,13 +13,30 @@ from config import Config
 
 from handlers.errors import register_error_handlers
 from utils.formatters import compact_number, compact_usd
-from utils.seo import build_sitemap_xml, canonical_url
+from utils.seo import build_sitemap_xml, canonical_url, sitemap_lastmod
 from sqlalchemy import text
 
 load_dotenv()
 
+if os.environ.get("FLASK_ENV") == "production" and not Config.SITE_URL:
+    raise RuntimeError("SITE_URL environment variable is required in production.")
+    
 app = Flask(__name__)
 
+cache = Cache(app, config={
+    "CACHE_TYPE": os.environ.get("CACHE_TYPE", "simple"),
+    "CACHE_DEFAULT_TIMEOUT": int(os.environ.get("CACHE_DEFAULT_TIMEOUT", 60)),
+})
+
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=[
+        os.environ.get("RATELIMIT_DAILY", "334 per day"),
+        os.environ.get("RATELIMIT_HOURLY", "52 per hour"),
+    ],
+    storage_uri=os.environ.get("RATELIMIT_STORAGE_URI", "memory://"),
+)
 
 @app.route("/robots.txt")
 def robots():
@@ -38,28 +55,29 @@ def robots():
     )
     return Response(body, mimetype="text/plain")
 
-
 @app.route("/sitemap.xml")
+@cache.memoize(timeout=Config.SITEMAP_CACHE_SECONDS)
 def sitemap():
     limit = Config.SITEMAP_COIN_LIMIT
-    entries: list[tuple[str, str, str]] = [
-        ("/", "hourly", "1.0"),
-        ("/exchanges", "daily", "0.8"),
-        ("/trending", "hourly", "0.8"),
-        ("/categories", "daily", "0.7"),
-        ("/news", "hourly", "0.7"),
+    entries: list[tuple[str, str, str, str | None]] = [
+        ("/", "hourly", "1.0", None),
+        ("/exchanges", "daily", "0.8", None),
+        ("/trending", "hourly", "0.8", None),
+        ("/categories", "daily", "0.7", None),
+        ("/news", "hourly", "0.7", None),
     ]
 
     coins = (
-        db.session.query(MarketCoin.cg_id)
+        db.session.query(MarketCoin.cg_id, MarketCoin.synced_at, MarketCoin.metrics_synced_at)
         .filter(MarketCoin.market_cap_rank.isnot(None))
         .order_by(MarketCoin.market_cap_rank.asc())
         .limit(limit)
         .all()
     )
-    for (cg_id,) in coins:
-        entries.append((f"/coin/{cg_id}", "hourly", "0.7"))
-        entries.append((f"/coin/analysis/{cg_id}", "daily", "0.8"))
+    for cg_id, synced_at, metrics_synced_at in coins:
+        lastmod = max(filter(None, [metrics_synced_at, synced_at]), default=None)
+        entries.append((f"/coin/{cg_id}", "hourly", "0.7", sitemap_lastmod(lastmod)))
+        entries.append((f"/coin/analysis/{cg_id}", "daily", "0.8", sitemap_lastmod(lastmod)))
 
     xml = build_sitemap_xml(Config.SITE_URL, entries)
     return Response(xml, mimetype="application/xml")
@@ -83,21 +101,6 @@ if not secret_key and os.environ.get("FLASK_ENV") == "production":
     raise RuntimeError("SECRET_KEY environment variable is required in production.")
 
 app.config["SECRET_KEY"] = secret_key or os.environ.get("DEV_SECRET_KEY")
-
-cache = Cache(app, config={
-    "CACHE_TYPE": os.environ.get("CACHE_TYPE", "simple"),
-    "CACHE_DEFAULT_TIMEOUT": int(os.environ.get("CACHE_DEFAULT_TIMEOUT", 60)),
-})
-
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=[
-        os.environ.get("RATELIMIT_DAILY", "334 per day"),
-        os.environ.get("RATELIMIT_HOURLY", "52 per hour"),
-    ],
-    storage_uri=os.environ.get("RATELIMIT_STORAGE_URI", "memory://"),
-)
 
 # === Database Configuration ===
 # DATABASE_URI in .env (MySQL preferred; sqlite fallback for local/dev only).

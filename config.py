@@ -71,3 +71,4 @@ class Config:
     SITE_NAME = os.getenv("SITE_NAME", "CryptoDash")
     SITE_ROBOTS = os.getenv("SITE_ROBOTS", "index, follow")
     SEO_DEFAULT_IMAGE = os.getenv("SEO_DEFAULT_IMAGE", "")
+    SITEMAP_CACHE_SECONDS = int(os.getenv("SITEMAP_CACHE_SECONDS", "3600"))

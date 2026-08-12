@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}{{ coin.get('name', 'Coin') }} - CryptoDash{% endblock %}
+{% block title %}{{ coin.get('name', 'Coin') }} Price, Chart & Stats{% endblock %}
 {% block meta_description %}{{ coin.get('name', 'Coin') }} ({{ coin.get('symbol', '')|upper }}) — live price, market cap, volume, and 24h change on CryptoDash.{% endblock %}
+{#{% block og_image %}#}
+{#    {{ (coin.get('image') or {}).get('large') or (coin.get('image') or {}).get('small') }}#}
+{#{% endblock %}#}
 
 {% block content %}
 {% set md = coin.get('market_data') or {} %}

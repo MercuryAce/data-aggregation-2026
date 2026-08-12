@@ -1,6 +1,7 @@
 {% block meta_description %}{% endblock %}
 {% block robots %}{% endblock %}
 {% block og_type %}{% endblock %}
+{% block og_image %}{% endblock %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,6 +21,7 @@
     {% set page_description = (self.meta_description() | default('', true) | striptags | trim) or site_description %}
     {% set page_robots = (self.robots() | default('', true) | striptags | trim) or site_robots %}
     {% set page_og_type = (self.og_type() | default('', true) | striptags | trim) or 'website' %}
+    {% set page_og_image = (self.og_image() | default('', true) | striptags | trim) or og_image %}
     {% include "partials/seo_head.html" %}
 
     {# Tokens first so Bootstrap picks up our palette, not its defaults #}

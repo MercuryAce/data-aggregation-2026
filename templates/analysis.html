@@ -2,6 +2,7 @@
 
 {% block title %}{{ coin.get('name', 'Coin') }} Analysis - CryptoDash{% endblock %}
 {% block meta_description %}{{ coin.get('name', 'Coin') }} statistical analysis — returns, volatility, correlations, and regime metrics compared to Bitcoin and gold on CryptoDash.{% endblock %}
+{% block og_image %}{{ coin.get('image') }}{% endblock %}
 
 {% macro hierarchy_stats(block, baseline_label, baseline_slug, coin_id, vs, window) %}
   {% if block and block.get('available') %}
